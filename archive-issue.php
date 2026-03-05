@@ -5,12 +5,6 @@ $active_tab = dracka_get_library_tab();
 if ($active_tab === 'series') {
     $active_tab = 'issues';
 }
-
-$tabs = [
-    'series'      => 'Series',
-    'issues'      => 'Issues',
-    'standalones' => 'Standalones',
-];
 ?>
 
 <main class="issue-archive">

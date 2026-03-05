@@ -2,11 +2,6 @@
 get_header();
 
 $active_tab = dracka_get_library_tab();
-$tabs = [
-    'series'      => 'Series',
-    'issues'      => 'Issues',
-    'standalones' => 'Standalones',
-];
 
 $empty_messages = [
     'series'      => 'No series yet.',

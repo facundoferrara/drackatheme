@@ -29,7 +29,7 @@ $empty_messages = [
                 $tab_classes .= ' is-active';
             }
             ?>
-            <a class="<?php echo esc_attr($tab_classes); ?>" href="<?php echo esc_url(home_url('/gallery/artwork/' . ($tab_slug !== 'artwork' ? '?dracka_gallery_tab=' . $tab_slug : ''))); ?>">
+            <a class="<?php echo esc_attr($tab_classes); ?>" href="<?php echo esc_url(home_url('/gallery/' . $tab_slug . '/')); ?>">
                 <?php echo esc_html($tab_label); ?>
             </a>
         <?php endforeach; ?>

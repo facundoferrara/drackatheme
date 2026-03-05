@@ -55,107 +55,83 @@ add_action('wp_enqueue_scripts', 'dracka_enqueue_assets');
 /**
  * Registers custom editor blocks for the theme.
  *
- * Creates the dynamic "Latest Issues" block used on the homepage.
+ * Creates the dynamic "Latest Issues" and "Latest Artwork" blocks
+ * via a shared configuration map.
  *
  * @return void
  */
 function dracka_register_blocks()
 {
-    wp_register_script(
-        'dracka-latest-issues-block-editor',
-        get_template_directory_uri() . '/js/blocks/latest-issues.js',
-        ['wp-blocks', 'wp-element', 'wp-i18n', 'wp-block-editor', 'wp-components'],
-        '0.1',
-        true
-    );
-
-    register_block_type('dracka/latest-issues', [
-        'api_version'     => 2,
-        'editor_script'   => 'dracka-latest-issues-block-editor',
-        'render_callback' => 'dracka_render_latest_issues_block',
-        'attributes'      => [
-            'title' => [
-                'type'    => 'string',
-                'default' => 'Latest Issues',
-            ],
-            'initialCount' => [
-                'type'    => 'number',
-                'default' => 8,
-            ],
-            'increment' => [
-                'type'    => 'number',
-                'default' => 8,
-            ],
-            'showMoreLabel' => [
-                'type'    => 'string',
-                'default' => 'Show more',
-            ],
-            'maxItemsCap' => [
-                'type'    => 'number',
-                'default' => 0,
-            ],
-            'sortMode' => [
-                'type'    => 'string',
-                'default' => 'newest',
-            ],
-            'goToLibraryLabel' => [
-                'type'    => 'string',
-                'default' => 'Go to library',
-            ],
-            'goToLibraryUrl' => [
-                'type'    => 'string',
-                'default' => '/library/issues/',
-            ],
+    $blocks = [
+        'issue' => [
+            'name'           => 'dracka/latest-issues',
+            'editor_script'  => 'dracka-latest-issues-block-editor',
+            'editor_js'      => '/js/blocks/latest-issues.js',
+            'render_cb'      => 'dracka_render_latest_issues_block',
+            'default_title'  => 'Latest Issues',
+            'default_label'  => 'Go to library',
+            'default_url'    => '/library/issues/',
         ],
-    ]);
-
-    wp_register_script(
-        'dracka-latest-artwork-block-editor',
-        get_template_directory_uri() . '/js/blocks/latest-artwork.js',
-        ['wp-blocks', 'wp-element', 'wp-i18n', 'wp-block-editor', 'wp-components'],
-        '0.1',
-        true
-    );
-
-    register_block_type('dracka/latest-artwork', [
-        'api_version'     => 2,
-        'editor_script'   => 'dracka-latest-artwork-block-editor',
-        'render_callback' => 'dracka_render_latest_artwork_block',
-        'attributes'      => [
-            'title' => [
-                'type'    => 'string',
-                'default' => 'Latest Artwork',
-            ],
-            'initialCount' => [
-                'type'    => 'number',
-                'default' => 8,
-            ],
-            'increment' => [
-                'type'    => 'number',
-                'default' => 8,
-            ],
-            'showMoreLabel' => [
-                'type'    => 'string',
-                'default' => 'Show more',
-            ],
-            'maxItemsCap' => [
-                'type'    => 'number',
-                'default' => 0,
-            ],
-            'sortMode' => [
-                'type'    => 'string',
-                'default' => 'newest',
-            ],
-            'goToLibraryLabel' => [
-                'type'    => 'string',
-                'default' => 'Go to gallery',
-            ],
-            'goToLibraryUrl' => [
-                'type'    => 'string',
-                'default' => '/gallery/artwork/',
-            ],
+        'artwork' => [
+            'name'           => 'dracka/latest-artwork',
+            'editor_script'  => 'dracka-latest-artwork-block-editor',
+            'editor_js'      => '/js/blocks/latest-artwork.js',
+            'render_cb'      => 'dracka_render_latest_artwork_block',
+            'default_title'  => 'Latest Artwork',
+            'default_label'  => 'Go to gallery',
+            'default_url'    => '/gallery/artwork/',
         ],
-    ]);
+    ];
+
+    foreach ($blocks as $block_config) {
+        wp_register_script(
+            $block_config['editor_script'],
+            get_template_directory_uri() . $block_config['editor_js'],
+            ['wp-blocks', 'wp-element', 'wp-i18n', 'wp-block-editor', 'wp-components'],
+            '0.1',
+            true
+        );
+
+        register_block_type($block_config['name'], [
+            'api_version'     => 2,
+            'editor_script'   => $block_config['editor_script'],
+            'render_callback' => $block_config['render_cb'],
+            'attributes'      => [
+                'title' => [
+                    'type'    => 'string',
+                    'default' => $block_config['default_title'],
+                ],
+                'initialCount' => [
+                    'type'    => 'number',
+                    'default' => 8,
+                ],
+                'increment' => [
+                    'type'    => 'number',
+                    'default' => 8,
+                ],
+                'showMoreLabel' => [
+                    'type'    => 'string',
+                    'default' => 'Show more',
+                ],
+                'maxItemsCap' => [
+                    'type'    => 'number',
+                    'default' => 0,
+                ],
+                'sortMode' => [
+                    'type'    => 'string',
+                    'default' => 'newest',
+                ],
+                'goToLibraryLabel' => [
+                    'type'    => 'string',
+                    'default' => $block_config['default_label'],
+                ],
+                'goToLibraryUrl' => [
+                    'type'    => 'string',
+                    'default' => $block_config['default_url'],
+                ],
+            ],
+        ]);
+    }
 }
 add_action('init', 'dracka_register_blocks');
 
@@ -170,17 +146,6 @@ function dracka_normalize_latest_sort_mode($sort_mode)
     $sort_mode = sanitize_key((string) $sort_mode);
 
     return in_array($sort_mode, ['newest', 'manual'], true) ? $sort_mode : 'newest';
-}
-
-/**
- * Backward compat wrapper for issues queries.
- *
- * @param string $sort_mode Raw sort mode.
- * @return string
- */
-function dracka_normalize_issue_sort_mode($sort_mode)
-{
-    return dracka_normalize_latest_sort_mode($sort_mode);
 }
 
 /**
@@ -246,37 +211,51 @@ function dracka_get_latest_issue_query_args($offset, $limit, $sort_mode = 'newes
 }
 
 /**
- * Renders a single issue card for the collapsible homepage grid.
+ * Renders a single content card for the collapsible homepage grid.
  *
- * @param int $issue_id Issue post ID.
+ * Supports issues (with title overlay) and artwork (image only).
+ *
+ * @param int    $post_id      Post ID.
+ * @param string $content_type Content type slug ('issue' or 'artwork').
  * @return string
  */
-function dracka_render_issue_card_markup($issue_id)
+function dracka_render_content_card_markup($post_id, $content_type)
 {
-    $issue_id = (int) $issue_id;
+    $post_id = (int) $post_id;
 
-    if (!$issue_id || get_post_status($issue_id) !== 'publish') {
+    if (!$post_id || get_post_status($post_id) !== 'publish') {
         return '';
     }
 
-    $title = get_the_title($issue_id);
-    $permalink = get_permalink($issue_id);
+    $css_prefix = $content_type === 'artwork' ? 'dracka-artwork' : 'dracka-issues';
+    $title = get_the_title($post_id);
+    $permalink = get_permalink($post_id);
     $thumbnail = get_the_post_thumbnail(
-        $issue_id,
+        $post_id,
         'large',
         [
-            'class'   => 'dracka-issues-card__image',
+            'class'   => $css_prefix . '-card__image',
             'loading' => 'lazy',
             'alt'     => $title,
         ]
     );
 
     if (!$thumbnail) {
-        $thumbnail = '<span class="dracka-issues-card__placeholder" aria-hidden="true"></span>';
+        $thumbnail = '<span class="' . esc_attr($css_prefix) . '-card__placeholder" aria-hidden="true"></span>';
+    }
+
+    if ($content_type === 'artwork') {
+        return sprintf(
+            '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link">%3$s</a></article>',
+            esc_attr($css_prefix),
+            esc_url($permalink),
+            $thumbnail
+        );
     }
 
     return sprintf(
-        '<article class="dracka-issues-card"><a href="%1$s" class="dracka-issues-card__link">%2$s<span class="dracka-issues-card__title">%3$s</span></a></article>',
+        '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link">%3$s<span class="%1$s-card__title">%4$s</span></a></article>',
+        esc_attr($css_prefix),
         esc_url($permalink),
         $thumbnail,
         esc_html($title)
@@ -284,313 +263,197 @@ function dracka_render_issue_card_markup($issue_id)
 }
 
 /**
- * Renders a single artwork card for the collapsible homepage grid.
+ * Wrapper for issue card rendering.
+ *
+ * @param int $issue_id Issue post ID.
+ * @return string
+ */
+function dracka_render_issue_card_markup($issue_id)
+{
+    return dracka_render_content_card_markup($issue_id, 'issue');
+}
+
+/**
+ * Wrapper for artwork card rendering.
  *
  * @param int $artwork_id Artwork post ID.
  * @return string
  */
 function dracka_render_artwork_card_markup($artwork_id)
 {
-    $artwork_id = (int) $artwork_id;
-
-    if (!$artwork_id || get_post_status($artwork_id) !== 'publish') {
-        return '';
-    }
-
-    $title = get_the_title($artwork_id);
-    $permalink = get_permalink($artwork_id);
-    $thumbnail = get_the_post_thumbnail(
-        $artwork_id,
-        'large',
-        [
-            'class'   => 'dracka-artwork-card__image',
-            'loading' => 'lazy',
-            'alt'     => $title,
-        ]
-    );
-
-    if (!$thumbnail) {
-        $thumbnail = '<span class="dracka-artwork-card__placeholder" aria-hidden="true"></span>';
-    }
-
-    return sprintf(
-        '<article class="dracka-artwork-card"><a href="%1$s" class="dracka-artwork-card__link">%2$s</a></article>',
-        esc_url($permalink),
-        $thumbnail
-    );
+    return dracka_render_content_card_markup($artwork_id, 'artwork');
 }
 
 /**
- * Renders the dynamic Latest Issues collapsible block.
+ * Renders a dynamic "Latest Content" collapsible block.
+ *
+ * Shared implementation for both issues and artwork homepage blocks.
+ * Each block type passes its content_type to control query, markup,
+ * REST endpoint, and CSS class prefixes.
+ *
+ * @param string              $content_type Post type slug ('issue' or 'artwork').
+ * @param array<string, mixed> $attributes  Block attributes.
+ * @param array<string, string> $defaults   Default labels/URLs for this content type.
+ * @return string
+ */
+function dracka_render_latest_content_block($content_type, $attributes, $defaults)
+{
+    $css_prefix = $content_type === 'artwork' ? 'dracka-artwork' : 'dracka-issues';
+    $rest_slug  = $content_type === 'artwork' ? 'artwork' : 'issues';
+
+    $title = isset($attributes['title']) ? sanitize_text_field($attributes['title']) : $defaults['title'];
+    $initial_count = isset($attributes['initialCount']) ? max(1, (int) $attributes['initialCount']) : 8;
+    $increment = isset($attributes['increment']) ? max(1, (int) $attributes['increment']) : 8;
+    $show_more_label = isset($attributes['showMoreLabel']) ? sanitize_text_field($attributes['showMoreLabel']) : 'Show more';
+    $max_items_cap = isset($attributes['maxItemsCap']) ? max(0, (int) $attributes['maxItemsCap']) : 0;
+    $sort_mode = isset($attributes['sortMode']) ? dracka_normalize_latest_sort_mode($attributes['sortMode']) : 'newest';
+    $go_to_library_label = isset($attributes['goToLibraryLabel']) ? sanitize_text_field($attributes['goToLibraryLabel']) : $defaults['go_label'];
+    $go_to_library_url = isset($attributes['goToLibraryUrl']) ? esc_url_raw($attributes['goToLibraryUrl']) : $defaults['go_url'];
+
+    if (!$go_to_library_url) {
+        $go_to_library_url = $defaults['go_url'];
+    }
+
+    $cap_info = dracka_get_effective_cap($content_type, $max_items_cap);
+    $total_published = $cap_info['total'];
+    $effective_cap = $cap_info['effective'];
+    $initial_render_count = min($initial_count, $effective_cap);
+    $initial_query = new WP_Query(dracka_get_latest_content_query_args(0, $initial_render_count, $content_type, $sort_mode));
+    $next_offset = $initial_render_count;
+    $has_more = $next_offset < $effective_cap;
+    $reached_cap = !$has_more && $total_published > $effective_cap;
+    $content_id = wp_unique_id('dracka-latest-' . $rest_slug . '-content-');
+
+    ob_start();
+?>
+    <section
+        class="dracka-collapsible dracka-latest-<?php echo esc_attr($rest_slug); ?>-block"
+        data-collapsible
+        data-load-url="<?php echo esc_url(rest_url('dracka/v1/' . $rest_slug)); ?>"
+        data-show-more-label="<?php echo esc_attr($show_more_label); ?>"
+        data-go-library-label="<?php echo esc_attr($go_to_library_label); ?>"
+        data-go-library-url="<?php echo esc_url($go_to_library_url); ?>"
+        data-loading-label="<?php echo esc_attr__('Loading...', 'dracka'); ?>"
+        data-sort-mode="<?php echo esc_attr($sort_mode); ?>"
+        data-max-items-cap="<?php echo esc_attr((string) $max_items_cap); ?>"
+        data-increment="<?php echo esc_attr((string) $increment); ?>"
+        data-next-offset="<?php echo esc_attr((string) $next_offset); ?>">
+        <button
+            type="button"
+            class="dracka-collapsible__toggle"
+            aria-expanded="false"
+            aria-controls="<?php echo esc_attr($content_id); ?>">
+            <span class="dracka-collapsible__arrow" aria-hidden="true"></span>
+            <span class="dracka-collapsible__title"><?php echo esc_html($title); ?></span>
+        </button>
+
+        <div id="<?php echo esc_attr($content_id); ?>" class="dracka-collapsible__content" hidden>
+            <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
+                <?php
+                while ($initial_query->have_posts()) {
+                    $initial_query->the_post();
+                    echo dracka_render_content_card_markup((int) get_the_ID(), $content_type);
+                }
+                wp_reset_postdata();
+                ?>
+            </div>
+
+            <?php if ($has_more) : ?>
+                <button type="button" class="<?php echo esc_attr($css_prefix); ?>-show-more" data-show-more><?php echo esc_html($show_more_label); ?></button>
+            <?php elseif ($reached_cap) : ?>
+                <a class="<?php echo esc_attr($css_prefix); ?>-go-library" href="<?php echo esc_url($go_to_library_url); ?>"><?php echo esc_html($go_to_library_label); ?></a>
+            <?php endif; ?>
+        </div>
+    </section>
+<?php
+    return (string) ob_get_clean();
+}
+
+/**
+ * Render callback for the Latest Issues block.
  *
  * @param array<string, mixed> $attributes Block attributes.
  * @return string
  */
 function dracka_render_latest_issues_block($attributes)
 {
-    $title = isset($attributes['title']) ? sanitize_text_field($attributes['title']) : 'Latest Issues';
-    $initial_count = isset($attributes['initialCount']) ? max(1, (int) $attributes['initialCount']) : 8;
-    $increment = isset($attributes['increment']) ? max(1, (int) $attributes['increment']) : 8;
-    $show_more_label = isset($attributes['showMoreLabel']) ? sanitize_text_field($attributes['showMoreLabel']) : 'Show more';
-    $max_items_cap = isset($attributes['maxItemsCap']) ? max(0, (int) $attributes['maxItemsCap']) : 0;
-    $sort_mode = isset($attributes['sortMode']) ? dracka_normalize_latest_sort_mode($attributes['sortMode']) : 'newest';
-    $go_to_library_label = isset($attributes['goToLibraryLabel']) ? sanitize_text_field($attributes['goToLibraryLabel']) : 'Go to library';
-    $go_to_library_url = isset($attributes['goToLibraryUrl']) ? esc_url_raw($attributes['goToLibraryUrl']) : '/library/issues/';
-
-    if (!$go_to_library_url) {
-        $go_to_library_url = '/library/issues/';
-    }
-
-    $cap_info = dracka_get_effective_cap('issue', $max_items_cap);
-    $total_published = $cap_info['total'];
-    $effective_cap = $cap_info['effective'];
-    $initial_render_count = min($initial_count, $effective_cap);
-    $initial_query = new WP_Query(dracka_get_latest_issue_query_args(0, $initial_render_count, $sort_mode));
-    $next_offset = $initial_render_count;
-    $has_more = $next_offset < $effective_cap;
-    $reached_cap = !$has_more && $total_published > $effective_cap;
-    $content_id = wp_unique_id('dracka-latest-issues-content-');
-
-    ob_start();
-?>
-    <section
-        class="dracka-collapsible dracka-latest-issues-block"
-        data-collapsible
-        data-load-url="<?php echo esc_url(rest_url('dracka/v1/issues')); ?>"
-        data-show-more-label="<?php echo esc_attr($show_more_label); ?>"
-        data-go-library-label="<?php echo esc_attr($go_to_library_label); ?>"
-        data-go-library-url="<?php echo esc_url($go_to_library_url); ?>"
-        data-loading-label="<?php echo esc_attr__('Loading...', 'dracka'); ?>"
-        data-sort-mode="<?php echo esc_attr($sort_mode); ?>"
-        data-max-items-cap="<?php echo esc_attr((string) $max_items_cap); ?>"
-        data-increment="<?php echo esc_attr((string) $increment); ?>"
-        data-next-offset="<?php echo esc_attr((string) $next_offset); ?>">
-        <button
-            type="button"
-            class="dracka-collapsible__toggle"
-            aria-expanded="false"
-            aria-controls="<?php echo esc_attr($content_id); ?>">
-            <span class="dracka-collapsible__arrow" aria-hidden="true"></span>
-            <span class="dracka-collapsible__title"><?php echo esc_html($title); ?></span>
-        </button>
-
-        <div id="<?php echo esc_attr($content_id); ?>" class="dracka-collapsible__content" hidden>
-            <div class="dracka-issues-grid" data-issues-grid>
-                <?php
-                while ($initial_query->have_posts()) {
-                    $initial_query->the_post();
-                    echo dracka_render_issue_card_markup((int) get_the_ID());
-                }
-                wp_reset_postdata();
-                ?>
-            </div>
-
-            <?php if ($has_more) : ?>
-                <button type="button" class="dracka-issues-show-more" data-show-more><?php echo esc_html($show_more_label); ?></button>
-            <?php elseif ($reached_cap) : ?>
-                <a class="dracka-issues-go-library" href="<?php echo esc_url($go_to_library_url); ?>"><?php echo esc_html($go_to_library_label); ?></a>
-            <?php endif; ?>
-        </div>
-    </section>
-<?php
-    return (string) ob_get_clean();
+    return dracka_render_latest_content_block('issue', $attributes, [
+        'title'    => 'Latest Issues',
+        'go_label' => 'Go to library',
+        'go_url'   => '/library/issues/',
+    ]);
 }
 
 /**
- * Renders the dynamic Latest Artwork collapsible block.
+ * Render callback for the Latest Artwork block.
  *
  * @param array<string, mixed> $attributes Block attributes.
  * @return string
  */
 function dracka_render_latest_artwork_block($attributes)
 {
-    $title = isset($attributes['title']) ? sanitize_text_field($attributes['title']) : 'Latest Artwork';
-    $initial_count = isset($attributes['initialCount']) ? max(1, (int) $attributes['initialCount']) : 8;
-    $increment = isset($attributes['increment']) ? max(1, (int) $attributes['increment']) : 8;
-    $show_more_label = isset($attributes['showMoreLabel']) ? sanitize_text_field($attributes['showMoreLabel']) : 'Show more';
-    $max_items_cap = isset($attributes['maxItemsCap']) ? max(0, (int) $attributes['maxItemsCap']) : 0;
-    $sort_mode = isset($attributes['sortMode']) ? dracka_normalize_latest_sort_mode($attributes['sortMode']) : 'newest';
-    $go_to_library_label = isset($attributes['goToLibraryLabel']) ? sanitize_text_field($attributes['goToLibraryLabel']) : 'Go to gallery';
-    $go_to_library_url = isset($attributes['goToLibraryUrl']) ? esc_url_raw($attributes['goToLibraryUrl']) : '/gallery/artwork/';
-
-    if (!$go_to_library_url) {
-        $go_to_library_url = '/gallery/artwork/';
-    }
-
-    $cap_info = dracka_get_effective_cap('artwork', $max_items_cap);
-    $total_published = $cap_info['total'];
-    $effective_cap = $cap_info['effective'];
-    $initial_render_count = min($initial_count, $effective_cap);
-    $initial_query = new WP_Query(dracka_get_latest_content_query_args(0, $initial_render_count, 'artwork', $sort_mode));
-    $next_offset = $initial_render_count;
-    $has_more = $next_offset < $effective_cap;
-    $reached_cap = !$has_more && $total_published > $effective_cap;
-    $content_id = wp_unique_id('dracka-latest-artwork-content-');
-
-    ob_start();
-?>
-    <section
-        class="dracka-collapsible dracka-latest-artwork-block"
-        data-collapsible
-        data-load-url="<?php echo esc_url(rest_url('dracka/v1/artwork')); ?>"
-        data-show-more-label="<?php echo esc_attr($show_more_label); ?>"
-        data-go-library-label="<?php echo esc_attr($go_to_library_label); ?>"
-        data-go-library-url="<?php echo esc_url($go_to_library_url); ?>"
-        data-loading-label="<?php echo esc_attr__('Loading...', 'dracka'); ?>"
-        data-sort-mode="<?php echo esc_attr($sort_mode); ?>"
-        data-max-items-cap="<?php echo esc_attr((string) $max_items_cap); ?>"
-        data-increment="<?php echo esc_attr((string) $increment); ?>"
-        data-next-offset="<?php echo esc_attr((string) $next_offset); ?>">
-        <button
-            type="button"
-            class="dracka-collapsible__toggle"
-            aria-expanded="false"
-            aria-controls="<?php echo esc_attr($content_id); ?>">
-            <span class="dracka-collapsible__arrow" aria-hidden="true"></span>
-            <span class="dracka-collapsible__title"><?php echo esc_html($title); ?></span>
-        </button>
-
-        <div id="<?php echo esc_attr($content_id); ?>" class="dracka-collapsible__content" hidden>
-            <div class="dracka-artwork-grid" data-artwork-grid>
-                <?php
-                while ($initial_query->have_posts()) {
-                    $initial_query->the_post();
-                    echo dracka_render_artwork_card_markup((int) get_the_ID());
-                }
-                wp_reset_postdata();
-                ?>
-            </div>
-
-            <?php if ($has_more) : ?>
-                <button type="button" class="dracka-artwork-show-more" data-show-more><?php echo esc_html($show_more_label); ?></button>
-            <?php elseif ($reached_cap) : ?>
-                <a class="dracka-artwork-go-library" href="<?php echo esc_url($go_to_library_url); ?>"><?php echo esc_html($go_to_library_label); ?></a>
-            <?php endif; ?>
-        </div>
-    </section>
-<?php
-    return (string) ob_get_clean();
+    return dracka_render_latest_content_block('artwork', $attributes, [
+        'title'    => 'Latest Artwork',
+        'go_label' => 'Go to gallery',
+        'go_url'   => '/gallery/artwork/',
+    ]);
 }
 
 /**
  * Registers REST routes used by dynamic frontend components.
  *
+ * Both issues and artwork endpoints share the same argument schema
+ * and are handled by a single callback with a content_type parameter.
+ *
  * @return void
  */
 function dracka_register_rest_routes()
 {
-    register_rest_route('dracka/v1', '/issues', [
-        'methods'             => WP_REST_Server::READABLE,
-        'callback'            => 'dracka_rest_get_latest_issues',
-        'permission_callback' => '__return_true',
-        'args'                => [
-            'offset' => [
-                'sanitize_callback' => 'absint',
-                'default'           => 0,
-            ],
-            'limit' => [
-                'sanitize_callback' => 'absint',
-                'default'           => 8,
-            ],
-            'max' => [
-                'sanitize_callback' => 'absint',
-                'default'           => 0,
-            ],
-            'sort' => [
-                'sanitize_callback' => 'sanitize_key',
-                'default'           => 'newest',
-            ],
+    $shared_args = [
+        'offset' => [
+            'sanitize_callback' => 'absint',
+            'default'           => 0,
         ],
-    ]);
+        'limit' => [
+            'sanitize_callback' => 'absint',
+            'default'           => 8,
+        ],
+        'max' => [
+            'sanitize_callback' => 'absint',
+            'default'           => 0,
+        ],
+        'sort' => [
+            'sanitize_callback' => 'sanitize_key',
+            'default'           => 'newest',
+        ],
+    ];
 
-    register_rest_route('dracka/v1', '/artwork', [
-        'methods'             => WP_REST_Server::READABLE,
-        'callback'            => 'dracka_rest_get_latest_artwork',
-        'permission_callback' => '__return_true',
-        'args'                => [
-            'offset' => [
-                'sanitize_callback' => 'absint',
-                'default'           => 0,
-            ],
-            'limit' => [
-                'sanitize_callback' => 'absint',
-                'default'           => 8,
-            ],
-            'max' => [
-                'sanitize_callback' => 'absint',
-                'default'           => 0,
-            ],
-            'sort' => [
-                'sanitize_callback' => 'sanitize_key',
-                'default'           => 'newest',
-            ],
-        ],
-    ]);
+    $endpoints = [
+        'issues'  => 'issue',
+        'artwork' => 'artwork',
+    ];
+
+    foreach ($endpoints as $route_slug => $content_type) {
+        register_rest_route('dracka/v1', '/' . $route_slug, [
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => function (WP_REST_Request $request) use ($content_type) {
+                return dracka_rest_get_latest_content($request, $content_type);
+            },
+            'permission_callback' => '__return_true',
+            'args'                => $shared_args,
+        ]);
+    }
 }
 add_action('rest_api_init', 'dracka_register_rest_routes');
 
 /**
- * REST callback returning latest issue cards in chunks.
+ * Shared REST callback returning latest content cards in chunks.
  *
- * @param WP_REST_Request $request Active REST request.
+ * @param WP_REST_Request $request      Active REST request.
+ * @param string          $content_type Post type slug ('issue' or 'artwork').
  * @return WP_REST_Response
  */
-function dracka_rest_get_latest_issues($request)
-{
-    $offset = max(0, (int) $request->get_param('offset'));
-    $limit = (int) $request->get_param('limit');
-    $limit = max(1, min(24, $limit));
-    $max_items_cap = max(0, (int) $request->get_param('max'));
-    $sort_mode = dracka_normalize_issue_sort_mode((string) $request->get_param('sort'));
-
-    $total_published = (int) wp_count_posts('issue')->publish;
-    $effective_cap = $max_items_cap > 0 ? min($max_items_cap, $total_published) : $total_published;
-
-    if ($offset >= $effective_cap) {
-        return rest_ensure_response([
-            'items_html'   => '',
-            'count'        => 0,
-            'next_offset'  => $effective_cap,
-            'has_more'     => false,
-            'reached_cap'  => $total_published > $effective_cap,
-            'total'        => $total_published,
-        ]);
-    }
-
-    $remaining = $effective_cap - $offset;
-    $query_limit = min($limit, $remaining);
-    $query = new WP_Query(dracka_get_latest_issue_query_args($offset, $query_limit, $sort_mode));
-
-    $items_html = '';
-
-    while ($query->have_posts()) {
-        $query->the_post();
-        $items_html .= dracka_render_issue_card_markup((int) get_the_ID());
-    }
-    wp_reset_postdata();
-
-    $rendered_count = (int) $query->post_count;
-    $next_offset = min($effective_cap, $offset + $rendered_count);
-    $has_more = $next_offset < $effective_cap;
-    $reached_cap = !$has_more && $total_published > $effective_cap;
-
-    return rest_ensure_response([
-        'items_html'   => $items_html,
-        'count'        => $rendered_count,
-        'next_offset'  => $next_offset,
-        'has_more'     => $has_more,
-        'reached_cap'  => $reached_cap,
-        'total'        => $total_published,
-    ]);
-}
-
-/**
- * REST callback returning latest artwork cards in chunks.
- *
- * @param WP_REST_Request $request Active REST request.
- * @return WP_REST_Response
- */
-function dracka_rest_get_latest_artwork($request)
+function dracka_rest_get_latest_content($request, $content_type)
 {
     $offset = max(0, (int) $request->get_param('offset'));
     $limit = (int) $request->get_param('limit');
@@ -598,7 +461,7 @@ function dracka_rest_get_latest_artwork($request)
     $max_items_cap = max(0, (int) $request->get_param('max'));
     $sort_mode = dracka_normalize_latest_sort_mode((string) $request->get_param('sort'));
 
-    $cap_info = dracka_get_effective_cap('artwork', $max_items_cap);
+    $cap_info = dracka_get_effective_cap($content_type, $max_items_cap);
     $total_published = $cap_info['total'];
     $effective_cap = $cap_info['effective'];
 
@@ -615,13 +478,13 @@ function dracka_rest_get_latest_artwork($request)
 
     $remaining = $effective_cap - $offset;
     $query_limit = min($limit, $remaining);
-    $query = new WP_Query(dracka_get_latest_content_query_args($offset, $query_limit, 'artwork', $sort_mode));
+    $query = new WP_Query(dracka_get_latest_content_query_args($offset, $query_limit, $content_type, $sort_mode));
 
     $items_html = '';
 
     while ($query->have_posts()) {
         $query->the_post();
-        $items_html .= dracka_render_artwork_card_markup((int) get_the_ID());
+        $items_html .= dracka_render_content_card_markup((int) get_the_ID(), $content_type);
     }
     wp_reset_postdata();
 
@@ -761,7 +624,7 @@ function dracka_register_content_types()
         'rewrite'      => ['slug' => 'series'],
         'menu_icon'    => 'dashicons-book-alt',
         'show_in_rest' => true,
-        'supports'     => ['title', 'editor', 'excerpt', 'thumbnail'],
+        'supports'     => ['title', 'thumbnail'],
     ]);
 
     register_post_type('issue', [
@@ -837,6 +700,78 @@ function dracka_register_content_types()
 add_action('init', 'dracka_register_content_types');
 
 /**
+ * Registers Series taxonomies for genre and publication status.
+ *
+ * @return void
+ */
+function dracka_register_series_taxonomies()
+{
+    register_taxonomy('dracka_series_genre', ['series'], [
+        'labels'            => [
+            'name'          => 'Genres',
+            'singular_name' => 'Genre',
+            'search_items'  => 'Search Genres',
+            'all_items'     => 'All Genres',
+            'edit_item'     => 'Edit Genre',
+            'update_item'   => 'Update Genre',
+            'add_new_item'  => 'Add New Genre',
+            'new_item_name' => 'New Genre Name',
+            'menu_name'     => 'Genre',
+        ],
+        'public'            => true,
+        'show_ui'           => true,
+        'show_admin_column' => true,
+        'show_in_rest'      => true,
+        'hierarchical'      => false,
+        'rewrite'           => ['slug' => 'series-genre'],
+    ]);
+
+    register_taxonomy('dracka_series_status', ['series'], [
+        'labels'            => [
+            'name'          => 'Statuses',
+            'singular_name' => 'Status',
+            'search_items'  => 'Search Statuses',
+            'all_items'     => 'All Statuses',
+            'edit_item'     => 'Edit Status',
+            'update_item'   => 'Update Status',
+            'add_new_item'  => 'Add New Status',
+            'new_item_name' => 'New Status Name',
+            'menu_name'     => 'Status',
+        ],
+        'public'            => true,
+        'show_ui'           => true,
+        'show_admin_column' => true,
+        'show_in_rest'      => true,
+        'hierarchical'      => false,
+        'rewrite'           => ['slug' => 'series-status'],
+    ]);
+}
+add_action('init', 'dracka_register_series_taxonomies');
+
+/**
+ * Ensures default status terms exist for series status taxonomy.
+ *
+ * @return void
+ */
+function dracka_seed_series_status_terms()
+{
+    $taxonomy = 'dracka_series_status';
+
+    if (!taxonomy_exists($taxonomy)) {
+        return;
+    }
+
+    $default_statuses = ['Ongoing', 'Coming Soon', 'Cancelled', 'Finalized'];
+
+    foreach ($default_statuses as $status_label) {
+        if (!term_exists($status_label, $taxonomy)) {
+            wp_insert_term($status_label, $taxonomy);
+        }
+    }
+}
+add_action('init', 'dracka_seed_series_status_terms', 20);
+
+/**
  * Allows SVG uploads for privileged content editors.
  *
  * @param array<string, string> $mimes Existing allowed MIME map.
@@ -857,6 +792,31 @@ const DRACKA_LOGO_SVG_META_KEY = 'dracka_logo_svg_attachment_id';
 const DRACKA_LOGO_SOURCE_META_KEY = 'dracka_logo_source_attachment_id';
 const DRACKA_LOGO_WEBP_META_KEY = 'dracka_logo_webp_attachment_ids';
 const DRACKA_LOGO_ACTIVE_META_KEY = 'dracka_logo_is_active';
+const DRACKA_SERIES_SPLASH_META_KEY = 'dracka_series_splash_attachment_id';
+const DRACKA_SERIES_AUTHOR_META_KEY = 'dracka_series_author';
+const DRACKA_SERIES_DESCRIPTION_META_KEY = 'dracka_series_description';
+const DRACKA_SERIES_YEAR_META_KEY = 'dracka_publication_year';
+
+/**
+ * Enqueues media scripts for issue and series editor screens.
+ *
+ * @param string $hook_suffix Current admin page hook suffix.
+ * @return void
+ */
+function dracka_enqueue_issue_series_admin_media($hook_suffix)
+{
+    if (!in_array($hook_suffix, ['post-new.php', 'post.php'], true)) {
+        return;
+    }
+
+    $screen = get_current_screen();
+    if (!$screen || !in_array($screen->post_type, ['issue', 'series'], true)) {
+        return;
+    }
+
+    wp_enqueue_media();
+}
+add_action('admin_enqueue_scripts', 'dracka_enqueue_issue_series_admin_media');
 
 /**
  * Enqueues media scripts for logo animation editor screens.
@@ -1053,6 +1013,26 @@ function dracka_add_relationship_metaboxes()
     );
 
     add_meta_box(
+        'dracka_series_details',
+        'Series Details',
+        'dracka_render_series_details_metabox',
+        ['series'],
+        'normal',
+        'high'
+    );
+
+    if (function_exists('use_block_editor_for_post_type') && use_block_editor_for_post_type('series')) {
+        add_meta_box(
+            'dracka_series_splash_fallback',
+            'Splash',
+            'dracka_render_series_splash_metabox',
+            ['series'],
+            'side',
+            'high'
+        );
+    }
+
+    add_meta_box(
         'dracka_logo_animation_media',
         'Logo Media',
         'dracka_render_logo_animation_metabox',
@@ -1062,6 +1042,115 @@ function dracka_add_relationship_metaboxes()
     );
 }
 add_action('add_meta_boxes', 'dracka_add_relationship_metaboxes');
+
+/**
+ * Renders splash selector above title in classic series editor.
+ *
+ * @param WP_Post $post Post being edited.
+ * @return void
+ */
+function dracka_render_series_splash_before_title($post)
+{
+    if (!$post instanceof WP_Post || $post->post_type !== 'series') {
+        return;
+    }
+
+    if (function_exists('use_block_editor_for_post_type') && use_block_editor_for_post_type('series')) {
+        return;
+    }
+
+    echo '<div class="postbox" style="margin: 16px 0 12px">';
+    echo '<div class="postbox-header"><h2 class="hndle">Splash</h2></div>';
+    echo '<div class="inside">';
+    dracka_render_series_splash_metabox($post);
+    echo '</div>';
+    echo '</div>';
+}
+add_action('edit_form_top', 'dracka_render_series_splash_before_title');
+
+/**
+ * Renders series details metabox fields.
+ *
+ * @param WP_Post $post Current series post.
+ * @return void
+ */
+function dracka_render_series_details_metabox($post)
+{
+    wp_nonce_field('dracka_save_series_details', 'dracka_series_details_nonce');
+
+    $series_author = (string) get_post_meta($post->ID, DRACKA_SERIES_AUTHOR_META_KEY, true);
+    $publication_year = (string) get_post_meta($post->ID, DRACKA_SERIES_YEAR_META_KEY, true);
+    $series_description = (string) get_post_meta($post->ID, DRACKA_SERIES_DESCRIPTION_META_KEY, true);
+
+    echo '<p>';
+    echo '<label for="dracka_series_author" style="display:block;margin-bottom:4px"><strong>Series Author</strong></label>';
+    echo '<input type="text" id="dracka_series_author" name="dracka_series_author" value="' . esc_attr($series_author) . '" style="width:100%" placeholder="Credit the comic author/artist">';
+    echo '</p>';
+
+    echo '<p>';
+    echo '<label for="dracka_publication_year" style="display:block;margin-bottom:4px"><strong>Publication Year</strong></label>';
+    echo '<input type="number" id="dracka_publication_year" name="dracka_publication_year" value="' . esc_attr($publication_year) . '" min="1000" max="9999" step="1" style="width:100%" placeholder="YYYY">';
+    echo '</p>';
+
+    echo '<p>';
+    echo '<label for="dracka_series_description" style="display:block;margin-bottom:4px"><strong>Description</strong></label>';
+    echo '<textarea id="dracka_series_description" name="dracka_series_description" rows="6" style="width:100%" placeholder="Series description, plot, lore...">' . esc_textarea($series_description) . '</textarea>';
+    echo '</p>';
+}
+
+/**
+ * Renders splash image selector for series.
+ *
+ * @param WP_Post $post Current series post.
+ * @return void
+ */
+function dracka_render_series_splash_metabox($post)
+{
+    wp_nonce_field('dracka_save_series_splash', 'dracka_series_splash_nonce');
+
+    $attachment_id = (int) get_post_meta($post->ID, DRACKA_SERIES_SPLASH_META_KEY, true);
+    $preview = $attachment_id > 0 ? wp_get_attachment_image($attachment_id, 'medium', false, ['style' => 'display:block;width:100%;height:auto;border-radius:3px']) : '';
+
+    echo '<input type="hidden" id="dracka_series_splash_id" name="dracka_series_splash_id" value="' . esc_attr($attachment_id) . '">';
+    echo '<div id="dracka_series_splash_preview" style="margin-bottom:10px">';
+    echo $preview ?: '<div style="padding:12px;border:1px dashed #ccd0d4;border-radius:3px;color:#666">No splash image selected.</div>';
+    echo '</div>';
+    echo '<p style="display:flex;gap:8px">';
+    echo '<button type="button" class="button button-primary" id="dracka_select_series_splash_btn">Select Splash</button>';
+    echo '<button type="button" class="button" id="dracka_remove_series_splash_btn">Remove Splash</button>';
+    echo '</p>';
+
+    echo '<script type="text/javascript">';
+    echo 'document.addEventListener("DOMContentLoaded", function() {';
+    echo 'var selectBtn = document.getElementById("dracka_select_series_splash_btn");';
+    echo 'var removeBtn = document.getElementById("dracka_remove_series_splash_btn");';
+    echo 'var input = document.getElementById("dracka_series_splash_id");';
+    echo 'var preview = document.getElementById("dracka_series_splash_preview");';
+    echo 'var frame;';
+    echo 'if (!selectBtn || !removeBtn || !input || !preview) { return; }';
+
+    echo 'selectBtn.addEventListener("click", function(e) {';
+    echo 'e.preventDefault();';
+    echo 'if (frame) { frame.open(); return; }';
+    echo 'frame = wp.media({ title: "Select Splash", library: { type: "image" }, button: { text: "Use this image" }, multiple: false });';
+    echo 'frame.on("select", function() {';
+    echo 'var attachment = frame.state().get("selection").first().toJSON();';
+    echo 'if (!attachment || attachment.type !== "image") { alert("Please select an image file."); return; }';
+    echo 'input.value = attachment.id;';
+    echo 'var src = attachment.sizes && attachment.sizes.medium ? attachment.sizes.medium.url : attachment.url;';
+    echo 'preview.innerHTML = "<img src=\"" + src + "\" alt=\"Series splash\" style=\"display:block;width:100%;height:auto;border-radius:3px\">";';
+    echo '});';
+    echo 'frame.open();';
+    echo '});';
+
+    echo 'removeBtn.addEventListener("click", function(e) {';
+    echo 'e.preventDefault();';
+    echo 'input.value = "";';
+    echo 'preview.innerHTML = "<div style=\"padding:12px;border:1px dashed #ccd0d4;border-radius:3px;color:#666\">No splash image selected.</div>";';
+    echo '});';
+    echo '});';
+    echo '</script>';
+}
 
 /**
  * Renders the issue metabox that links an issue to a series.
@@ -1366,11 +1455,14 @@ function dracka_save_relationship_meta($post_id)
 {
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
 
-    if (isset($_POST['post_type']) && $_POST['post_type'] === 'issue') {
+    // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+    $post_type = isset($_POST['post_type']) ? sanitize_key(wp_unslash($_POST['post_type'])) : '';
+
+    if ($post_type === 'issue') {
         if (!current_user_can('edit_post', $post_id)) return;
 
         // Save series link and order (if nonce is valid)
-        if (isset($_POST['dracka_series_nonce']) && wp_verify_nonce($_POST['dracka_series_nonce'], 'dracka_save_series_link')) {
+        if (isset($_POST['dracka_series_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_series_nonce'])), 'dracka_save_series_link')) {
             $series_id = isset($_POST['dracka_series_id']) ? (int) $_POST['dracka_series_id'] : 0;
             if ($series_id > 0) {
                 update_post_meta($post_id, 'dracka_series_id', $series_id);
@@ -1387,7 +1479,7 @@ function dracka_save_relationship_meta($post_id)
         }
 
         // Save Issue PDF (independent of series nonce)
-        if (isset($_POST['dracka_issue_pdf_nonce']) && wp_verify_nonce($_POST['dracka_issue_pdf_nonce'], 'dracka_save_issue_pdf')) {
+        if (isset($_POST['dracka_issue_pdf_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_issue_pdf_nonce'])), 'dracka_save_issue_pdf')) {
             if (isset($_POST['dracka_issue_pdf_id'])) {
                 $attachment_id = (int) $_POST['dracka_issue_pdf_id'];
                 if ($attachment_id > 0 && dracka_is_valid_issue_pdf($attachment_id)) {
@@ -1399,8 +1491,8 @@ function dracka_save_relationship_meta($post_id)
         }
     }
 
-    if (isset($_POST['post_type']) && $_POST['post_type'] === 'artwork') {
-        if (!isset($_POST['dracka_album_nonce']) || !wp_verify_nonce($_POST['dracka_album_nonce'], 'dracka_save_album_link')) return;
+    if ($post_type === 'artwork') {
+        if (!isset($_POST['dracka_album_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_album_nonce'])), 'dracka_save_album_link')) return;
         if (!current_user_can('edit_post', $post_id)) return;
 
         $album_id = isset($_POST['dracka_album_id']) ? (int) $_POST['dracka_album_id'] : 0;
@@ -1411,8 +1503,8 @@ function dracka_save_relationship_meta($post_id)
         }
     }
 
-    if (isset($_POST['post_type']) && $_POST['post_type'] === 'logo_animation') {
-        if (!isset($_POST['dracka_logo_animation_nonce']) || !wp_verify_nonce($_POST['dracka_logo_animation_nonce'], 'dracka_save_logo_animation')) return;
+    if ($post_type === 'logo_animation') {
+        if (!isset($_POST['dracka_logo_animation_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_logo_animation_nonce'])), 'dracka_save_logo_animation')) return;
         if (!current_user_can('edit_post', $post_id)) return;
 
         $svg_attachment_id = isset($_POST['dracka_logo_svg_id']) ? (int) $_POST['dracka_logo_svg_id'] : 0;
@@ -1449,8 +1541,62 @@ function dracka_save_relationship_meta($post_id)
             delete_post_meta($post_id, DRACKA_LOGO_ACTIVE_META_KEY);
         }
     }
+
+    if ($post_type === 'series') {
+        if (!current_user_can('edit_post', $post_id)) return;
+
+        if (isset($_POST['dracka_series_splash_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_series_splash_nonce'])), 'dracka_save_series_splash')) {
+            $attachment_id = isset($_POST['dracka_series_splash_id']) ? (int) $_POST['dracka_series_splash_id'] : 0;
+            if ($attachment_id > 0 && dracka_is_valid_image_attachment($attachment_id)) {
+                update_post_meta($post_id, DRACKA_SERIES_SPLASH_META_KEY, $attachment_id);
+            } else {
+                delete_post_meta($post_id, DRACKA_SERIES_SPLASH_META_KEY);
+            }
+        }
+
+        if (isset($_POST['dracka_series_details_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_series_details_nonce'])), 'dracka_save_series_details')) {
+            $author = isset($_POST['dracka_series_author']) ? sanitize_text_field(wp_unslash($_POST['dracka_series_author'])) : '';
+            $description = isset($_POST['dracka_series_description']) ? sanitize_textarea_field(wp_unslash($_POST['dracka_series_description'])) : '';
+            $year_raw = isset($_POST['dracka_publication_year']) ? trim(wp_unslash($_POST['dracka_publication_year'])) : '';
+
+            if ($author !== '') {
+                update_post_meta($post_id, DRACKA_SERIES_AUTHOR_META_KEY, $author);
+            } else {
+                delete_post_meta($post_id, DRACKA_SERIES_AUTHOR_META_KEY);
+            }
+
+            if ($description !== '') {
+                update_post_meta($post_id, DRACKA_SERIES_DESCRIPTION_META_KEY, $description);
+            } else {
+                delete_post_meta($post_id, DRACKA_SERIES_DESCRIPTION_META_KEY);
+            }
+
+            if (preg_match('/^\d{4}$/', $year_raw) === 1) {
+                update_post_meta($post_id, DRACKA_SERIES_YEAR_META_KEY, $year_raw);
+            } else {
+                delete_post_meta($post_id, DRACKA_SERIES_YEAR_META_KEY);
+            }
+        }
+    }
 }
 add_action('save_post', 'dracka_save_relationship_meta');
+
+/**
+ * Validates that an attachment is an image.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return bool
+ */
+function dracka_is_valid_image_attachment($attachment_id)
+{
+    if ($attachment_id <= 0) {
+        return false;
+    }
+
+    $mime_type = get_post_mime_type($attachment_id);
+
+    return is_string($mime_type) && strpos($mime_type, 'image/') === 0;
+}
 
 /**
  * Parses a comma-separated attachment ID list into normalized integers.
@@ -1515,17 +1661,6 @@ function dracka_is_valid_logo_source($attachment_id)
     $mime_type = get_post_mime_type($attachment_id);
 
     return in_array($mime_type, ['image/svg+xml', 'image/png'], true);
-}
-
-/**
- * Backward-compatible wrapper for previous helper name.
- *
- * @param int $attachment_id Attachment ID.
- * @return bool
- */
-function dracka_is_valid_logo_svg($attachment_id)
-{
-    return dracka_is_valid_logo_source($attachment_id);
 }
 
 /**
@@ -2008,6 +2143,7 @@ function dracka_social_icons($item_output, $item, $depth, $args)
     $icon = '';
 
     $social_platforms = [
+        'facebook.com'  => 'facebook',
         'instagram.com' => 'instagram',
         'x.com'         => 'x',
         'twitter.com'   => 'x',
@@ -2027,48 +2163,6 @@ function dracka_social_icons($item_output, $item, $depth, $args)
 add_filter('walker_nav_menu_start_el', 'dracka_social_icons', 10, 4);
 
 require get_template_directory() . '/inc/svg-icons.php';
-
-/**
- * Renders a breadcrumb trail for navigation context.
- *
- * Accepts an array of breadcrumb items as key-value pairs where keys are URLs
- * and values are labels. The final item (with empty string key) is treated as
- * the current page (not a link).
- *
- * Example:
- *   dracka_render_breadcrumbs([
- *       home_url() => 'Home',
- *       home_url('/library/') => 'Library',
- *       '' => 'Issues',  // Current page, not linked
- *   ]);
- *
- * @param array $crumbs Associative array of breadcrumbs [url => label].
- * @return void
- */
-function dracka_render_breadcrumbs($crumbs = [])
-{
-    if (empty($crumbs)) {
-        return;
-    }
-
-    echo '<nav class="breadcrumbs" aria-label="Breadcrumb">';
-    echo '<ol class="breadcrumb-list">';
-
-    foreach ($crumbs as $url => $label) {
-        echo '<li class="breadcrumb-item">';
-
-        if (!empty($url)) {
-            echo '<a href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
-        } else {
-            echo '<span class="breadcrumb-current" aria-current="page">' . esc_html($label) . '</span>';
-        }
-
-        echo '</li>';
-    }
-
-    echo '</ol>';
-    echo '</nav>';
-}
 
 /**
  * Issue PDF Module: Stores and manages PDF attachments for issue posts.
@@ -2191,7 +2285,7 @@ function dracka_handle_create_issue_from_pdf_form()
         return;
     }
 
-    if (!isset($_POST[DRACKA_ISSUE_PDF_NONCE_FIELD]) || $_POST['post_type'] !== 'issue') {
+    if (!isset($_POST[DRACKA_ISSUE_PDF_NONCE_FIELD]) || !isset($_POST['post_type']) || sanitize_key(wp_unslash($_POST['post_type'])) !== 'issue') {
         return;
     }
 
@@ -2213,8 +2307,10 @@ function dracka_handle_create_issue_from_pdf_form()
 
     $file = $_FILES['dracka_pdf_file'];
 
-    // Validate MIME type
-    if ($file['type'] !== 'application/pdf') {
+    // Validate MIME type using server-side check instead of client-reported type
+    $file_type_info = wp_check_filetype(basename($file['name']), ['pdf' => 'application/pdf']);
+
+    if (empty($file_type_info['type'])) {
         wp_safe_redirect(add_query_arg('dracka_error', 'invalid_type', admin_url('admin.php?page=dracka-create-issue-from-pdf')));
         exit;
     }
