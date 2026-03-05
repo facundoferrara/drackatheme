@@ -10,6 +10,30 @@ Version: 0.1
    RESET
 ========================= */
 
+@font-face {
+  font-family: 'Avenir';
+  src: url('./assets/fonts/Avenir%20Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Avenir';
+  src: url('./assets/fonts/Avenir%20Heavy.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Avenir';
+  src: url('./assets/fonts/Avenir%20Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -17,10 +41,42 @@ Version: 0.1
 }
 
 body {
-  font-family: sans-serif;
+  font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-weight: 400;
   background: var(--color-bg);
   color: var(--color-text);
   line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-weight: 900;
+}
+
+button,
+input[type='submit'],
+input[type='button'],
+.content-badge,
+.library-type,
+.archive-tab,
+.pagination .page-numbers,
+.library-search button,
+.gallery-search button,
+.dracka-collapsible__toggle,
+.dracka-collapsible__title,
+.dracka-artwork-show-more,
+.dracka-artwork-go-library,
+.dracka-issues-show-more,
+.dracka-issues-go-library,
+.main-nav a,
+.overlay-nav a {
+  font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-weight: 800;
 }
 
 a {
@@ -543,7 +599,7 @@ main > h1 {
 
 .logo a {
   text-decoration: none;
-  font-weight: bold;
+  font-weight: 800;
   font-size: 1.2rem;
   color: var(--color-text);
 }
@@ -579,6 +635,7 @@ main > h1 {
 }
 
 .header-action,
+.hamburger,
 .overlay-close {
   background: none;
   border: none;
@@ -591,7 +648,7 @@ main > h1 {
   width: 2.25rem;
   height: 2.25rem;
   padding: 0;
-  color: var(--color-text);
+  color: #ffffff;
 }
 
 .header-action--info {
@@ -604,29 +661,58 @@ main > h1 {
 
 .mobile-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  z-index: 1000;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.mobile-overlay-panel {
   width: 100%;
   height: 90vh;
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  padding: 1rem 0.75rem 2rem;
   transform: translateY(-100%);
   transition: transform 0.6s ease;
-  z-index: 1000;
-  inset: 0;
-  padding: 1rem 1.5rem 2rem;
+}
+
+.overlay-dismiss-zone {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
 }
 
 .overlay-header {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: calc(2.75rem);
 }
 
-.overlay-nav {
-  margin-top: 4.25rem;
+.overlay-close {
+  font-size: 2.15rem;
+  font-weight: 800;
+  width: 36px;
+  height: 36px;
+}
+
+.overlay-nav,
+.overlay-info {
+  margin-top: 1rem;
+}
+
+.mobile-overlay--menu .overlay-social {
+  margin-top: auto;
 }
 
 .overlay-social ul {
@@ -668,6 +754,13 @@ main > h1 {
 }
 
 .mobile-overlay.is-open {
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.mobile-overlay.is-open .mobile-overlay-panel {
   transform: translateY(0);
 }
 
@@ -681,7 +774,6 @@ main > h1 {
 }
 
 .overlay-info {
-  margin-top: 4.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;

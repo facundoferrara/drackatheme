@@ -9,6 +9,70 @@ function setupMobilePanels() {
 
   const getPanelById = (panelId) => document.querySelector(`[data-mobile-panel="${panelId}"]`);
 
+  const setupSwipeClose = (panelElement, panelId) => {
+    const swipeElement = panelElement.querySelector('[data-overlay-panel]');
+
+    if (!swipeElement) {
+      return;
+    }
+
+    let startX = 0;
+    let startY = 0;
+    let hasTouch = false;
+    let shouldCloseBySwipe = false;
+    let suppressClick = false;
+
+    swipeElement.addEventListener('touchstart', (event) => {
+      if (!event.touches || event.touches.length === 0) {
+        return;
+      }
+
+      const firstTouch = event.touches[0];
+      startX = firstTouch.clientX;
+      startY = firstTouch.clientY;
+      hasTouch = true;
+      shouldCloseBySwipe = false;
+    }, { passive: true, capture: true });
+
+    swipeElement.addEventListener('touchmove', (event) => {
+      if (!hasTouch || !event.touches || event.touches.length === 0) {
+        return;
+      }
+
+      const firstTouch = event.touches[0];
+      const deltaX = firstTouch.clientX - startX;
+      const deltaY = firstTouch.clientY - startY;
+
+      if (deltaY < -60 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+        shouldCloseBySwipe = true;
+      }
+    }, { passive: true, capture: true });
+
+    swipeElement.addEventListener('touchend', () => {
+      if (!hasTouch) {
+        return;
+      }
+
+      hasTouch = false;
+
+      if (shouldCloseBySwipe) {
+        shouldCloseBySwipe = false;
+        suppressClick = true;
+        closePanel(panelId);
+      }
+    }, { passive: true, capture: true });
+
+    swipeElement.addEventListener('click', (event) => {
+      if (!suppressClick) {
+        return;
+      }
+
+      suppressClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+  };
+
   const updateScrollLock = () => {
     const hasOpenPanel = Array.from(panelElements).some((panelElement) => panelElement.classList.contains('is-open'));
     document.body.classList.toggle('no-scroll', hasOpenPanel);
@@ -92,6 +156,16 @@ function setupMobilePanels() {
 
       closePanel(panelId);
     });
+  });
+
+  panelElements.forEach((panelElement) => {
+    const panelId = panelElement.getAttribute('data-mobile-panel');
+
+    if (!panelId) {
+      return;
+    }
+
+    setupSwipeClose(panelElement, panelId);
   });
 
   document.addEventListener('keydown', (event) => {

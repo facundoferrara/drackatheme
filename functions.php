@@ -33,11 +33,14 @@ add_action('after_setup_theme', 'dracka_setup');
  */
 function dracka_enqueue_assets()
 {
+    $style_path    = get_template_directory() . '/style.css';
+    $style_version = file_exists($style_path) ? (string) filemtime($style_path) : '0.1';
+
     wp_enqueue_style(
         'dracka-style',
         get_stylesheet_uri(),
         [],
-        '0.1'
+        $style_version
     );
 
     dracka_add_customizer_css();
