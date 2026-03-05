@@ -6,7 +6,9 @@ get_header();
     <?php if (have_posts()) : ?>
         <?php while (have_posts()) : the_post(); ?>
             <article <?php post_class(); ?>>
-                <h1><?php the_title(); ?></h1>
+                <?php if (!is_front_page()) : ?>
+                    <h1><?php the_title(); ?></h1>
+                <?php endif; ?>
                 <div class="entry-content">
                     <?php the_content(); ?>
                 </div>
