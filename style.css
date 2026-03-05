@@ -705,7 +705,6 @@ main > h1 {
 .overlay-header {
   display: flex;
   justify-content: flex-end;
-  margin-top: calc(2.75rem);
 }
 
 .overlay-close {
@@ -811,7 +810,32 @@ main > h1 {
   color: var(--color-text);
 }
 
+#n2-ss-1,
+#n2-ss-1 .n2-ss-slider-wrapper-inside,
+#n2-ss-1 .n2-ss-slider-1,
+#n2-ss-1 .n2-ss-slider-2,
+#n2-ss-1 .n2-ss-slider-3,
+#n2-ss-1 .n2-ss-slider-4 {
+  max-height: 600px !important;
+}
+
+#n2-ss-1 {
+  overflow: hidden;
+}
+
+#n2-ss-1 .n2-ss-slider-2,
+#n2-ss-1 .n2-ss-slider-3,
+#n2-ss-1 .n2-ss-slider-4,
+#n2-ss-1 .n2-ss-slide,
+#n2-ss-1 .n2-ss-slide-backgrounds {
+  height: 600px !important;
+}
+
 @media (max-width: 767px) {
+  .site-header {
+    --header-height: 80px;
+  }
+
   .header-inner {
     display: grid;
     grid-template-columns: 2.5rem 1fr 2.5rem;
