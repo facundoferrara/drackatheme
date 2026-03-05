@@ -622,7 +622,7 @@ main > h1 {
   justify-content: center;
   width: auto;
   max-width: min(240px, 60vw);
-  height: calc(var(--header-height) - 8px);
+  height: var(--header-height);
 }
 
 .logo .dracka-logo-static,
