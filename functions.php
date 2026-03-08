@@ -13,6 +13,7 @@ function dracka_setup()
 {
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');
+    add_theme_support('widgets');
     add_theme_support('html5', ['search-form', 'comment-form', 'comment-list', 'gallery', 'caption']);
     register_nav_menus([
         'primary' => 'Primary Menu',
@@ -21,6 +22,28 @@ function dracka_setup()
 }
 
 add_action('after_setup_theme', 'dracka_setup');
+
+/**
+ * Registers widget areas used by the theme.
+ *
+ * Footer widgets are block-editor compatible and allow managing
+ * footer content from Appearance > Widgets.
+ *
+ * @return void
+ */
+function dracka_register_sidebars()
+{
+    register_sidebar([
+        'name'          => __('Footer Content', 'dracka'),
+        'id'            => 'footer-content',
+        'description'   => __('Editable footer block area.', 'dracka'),
+        'before_widget' => '<div class="footer-widget">',
+        'after_widget'  => '</div>',
+        'before_title'  => '<h2 class="footer-widget-title">',
+        'after_title'   => '</h2>',
+    ]);
+}
+add_action('widgets_init', 'dracka_register_sidebars');
 
 /**
  * Enqueues frontend stylesheet/script assets and dynamic palette CSS.
