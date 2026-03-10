@@ -375,6 +375,18 @@ function setupCollapsibleBlock(blockElement) {
   });
 }
 
+function blockHasRenderableCards(blockElement) {
+  const grid = blockElement.querySelector('[data-content-grid]');
+
+  if (!grid) {
+    return false;
+  }
+
+  return Boolean(
+    grid.querySelector('.dracka-issues-card, .dracka-artwork-card')
+  );
+}
+
 function setupLatestContentLoader(blockElement) {
   const showMoreButton = blockElement.querySelector('[data-show-more]');
   const grid = blockElement.querySelector('[data-content-grid]');
@@ -469,6 +481,11 @@ setupMobilePanels();
 setupAnimatedLogo();
 
 collapsibleBlocks.forEach((blockElement) => {
+  if (!blockHasRenderableCards(blockElement)) {
+    blockElement.remove();
+    return;
+  }
+
   setupCollapsibleBlock(blockElement);
   setupLatestContentLoader(blockElement);
 });

@@ -58,6 +58,8 @@ function dracka_enqueue_assets()
 {
     $style_path    = get_template_directory() . '/style.css';
     $style_version = file_exists($style_path) ? (string) filemtime($style_path) : '0.1';
+    $script_path   = get_template_directory() . '/js/main.js';
+    $script_version = file_exists($script_path) ? (string) filemtime($script_path) : '0.1';
 
     wp_enqueue_style(
         'dracka-style',
@@ -72,7 +74,7 @@ function dracka_enqueue_assets()
         'dracka-main',
         get_template_directory_uri() . '/js/main.js',
         [],
-        '0.1',
+        $script_version,
         true
     );
 }
@@ -356,6 +358,18 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
         return '';
     }
 
+    $initial_cards_html = '';
+
+    while ($initial_query->have_posts()) {
+        $initial_query->the_post();
+        $initial_cards_html .= dracka_render_content_card_markup((int) get_the_ID(), $content_type);
+    }
+    wp_reset_postdata();
+
+    if ($initial_cards_html === '') {
+        return '';
+    }
+
     $next_offset = $initial_render_count;
     $has_more = $next_offset < $effective_cap;
     $reached_cap = !$has_more && $total_published > $effective_cap;
@@ -386,12 +400,7 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
 
         <div id="<?php echo esc_attr($content_id); ?>" class="dracka-collapsible__content" hidden>
             <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
-                <?php
-                while ($initial_query->have_posts()) {
-                    $initial_query->the_post();
-                    echo dracka_render_content_card_markup((int) get_the_ID(), $content_type);
-                }
-                wp_reset_postdata();
+                <?php echo $initial_cards_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
                 ?>
             </div>
 
