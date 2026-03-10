@@ -160,6 +160,26 @@ function dracka_register_blocks()
             ],
         ]);
     }
+
+    wp_register_script(
+        'dracka-news-ticker-block-editor',
+        get_template_directory_uri() . '/js/blocks/news-ticker.js',
+        ['wp-blocks', 'wp-element', 'wp-i18n', 'wp-block-editor', 'wp-components'],
+        '0.1',
+        true
+    );
+
+    register_block_type('dracka/news-ticker', [
+        'api_version'     => 2,
+        'editor_script'   => 'dracka-news-ticker-block-editor',
+        'render_callback' => 'dracka_render_news_ticker_block',
+        'attributes'      => [
+            'speedSeconds' => [
+                'type'    => 'number',
+                'default' => 28,
+            ],
+        ],
+    ]);
 }
 add_action('init', 'dracka_register_blocks');
 
@@ -443,6 +463,98 @@ function dracka_render_latest_artwork_block($attributes)
         'go_label' => 'Go to gallery',
         'go_url'   => '/gallery/artwork/',
     ]);
+}
+
+/**
+ * Render callback for the News Ticker block.
+ *
+ * @param array<string, mixed> $attributes Block attributes.
+ * @return string
+ */
+function dracka_render_news_ticker_block($attributes)
+{
+    $speed_seconds = isset($attributes['speedSeconds']) ? (int) $attributes['speedSeconds'] : 28;
+    $speed_seconds = max(8, min(120, $speed_seconds));
+
+    $query = new WP_Query([
+        'post_type'      => 'ticker',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'orderby'        => [
+            'menu_order' => 'ASC',
+            'date'       => 'DESC',
+        ],
+        'order'          => 'ASC',
+        'no_found_rows'  => true,
+        'meta_query'     => [
+            [
+                'key'     => DRACKA_TICKER_ACTIVE_META_KEY,
+                'value'   => '1',
+                'compare' => '=',
+            ],
+        ],
+    ]);
+
+    if (!$query->have_posts()) {
+        return '';
+    }
+
+    $allowed_html = [
+        'a' => [
+            'href'       => true,
+            'target'     => true,
+            'rel'        => true,
+            'class'      => true,
+            'aria-label' => true,
+        ],
+        'strong' => [],
+        'em'     => [],
+        'b'      => [],
+        'i'      => [],
+        'span'   => [
+            'class' => true,
+        ],
+    ];
+
+    $ticker_items = [];
+
+    while ($query->have_posts()) {
+        $query->the_post();
+
+        $content = (string) get_the_content(null, false, get_the_ID());
+        $content = apply_filters('the_content', $content);
+        $content = (string) wp_kses($content, $allowed_html);
+        $content = trim((string) preg_replace('/\s+/', ' ', $content));
+
+        if ($content === '') {
+            continue;
+        }
+
+        $ticker_items[] = '<span class="dracka-news-ticker__item">' . $content . '</span>';
+    }
+    wp_reset_postdata();
+
+    if (empty($ticker_items)) {
+        return '';
+    }
+
+    $separator = '<span class="dracka-news-ticker__separator" aria-hidden="true">&bull;</span>';
+    $ticker_line = implode($separator, $ticker_items);
+
+    ob_start();
+?>
+    <section class="dracka-news-ticker" aria-label="News ticker" style="--dracka-news-ticker-duration: <?php echo esc_attr((string) $speed_seconds); ?>s;">
+        <div class="dracka-news-ticker__viewport">
+            <div class="dracka-news-ticker__track">
+                <div class="dracka-news-ticker__line"><?php echo $ticker_line; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
+                                                        ?></div>
+                <div class="dracka-news-ticker__line" aria-hidden="true"><?php echo $ticker_line; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
+                                                                            ?></div>
+            </div>
+        </div>
+    </section>
+<?php
+    return (string) ob_get_clean();
 }
 
 /**
@@ -741,6 +853,25 @@ function dracka_register_content_types()
         'show_in_rest'        => false,
         'supports'            => ['title', 'revisions'],
     ]);
+
+    register_post_type('ticker', [
+        'labels' => [
+            'name'          => 'Ticker Items',
+            'singular_name' => 'Ticker Item',
+            'add_new_item'  => 'Add New Ticker Item',
+            'edit_item'     => 'Edit Ticker Item',
+            'view_item'     => 'View Ticker Item',
+        ],
+        'public'              => false,
+        'show_ui'             => true,
+        'show_in_menu'        => true,
+        'show_in_admin_bar'   => true,
+        'show_in_nav_menus'   => false,
+        'exclude_from_search' => true,
+        'menu_icon'           => 'dashicons-megaphone',
+        'show_in_rest'        => true,
+        'supports'            => ['title', 'editor', 'revisions', 'page-attributes'],
+    ]);
 }
 
 add_action('init', 'dracka_register_content_types');
@@ -838,6 +969,7 @@ const DRACKA_LOGO_SVG_META_KEY = 'dracka_logo_svg_attachment_id';
 const DRACKA_LOGO_SOURCE_META_KEY = 'dracka_logo_source_attachment_id';
 const DRACKA_LOGO_WEBP_META_KEY = 'dracka_logo_webp_attachment_ids';
 const DRACKA_LOGO_ACTIVE_META_KEY = 'dracka_logo_is_active';
+const DRACKA_TICKER_ACTIVE_META_KEY = 'dracka_ticker_is_active';
 const DRACKA_SERIES_SPLASH_META_KEY = 'dracka_series_splash_attachment_id';
 const DRACKA_SERIES_AUTHOR_META_KEY = 'dracka_series_author';
 const DRACKA_SERIES_DESCRIPTION_META_KEY = 'dracka_series_description';
@@ -1084,6 +1216,15 @@ function dracka_add_relationship_metaboxes()
         'dracka_render_logo_animation_metabox',
         ['logo_animation'],
         'normal',
+        'default'
+    );
+
+    add_meta_box(
+        'dracka_ticker_settings',
+        'Ticker Settings',
+        'dracka_render_ticker_metabox',
+        ['ticker'],
+        'side',
         'default'
     );
 }
@@ -1456,6 +1597,25 @@ function dracka_render_logo_animation_metabox($post)
 }
 
 /**
+ * Renders ticker settings metabox with active toggle.
+ *
+ * @param WP_Post $post Current ticker post being edited.
+ * @return void
+ */
+function dracka_render_ticker_metabox($post)
+{
+    wp_nonce_field('dracka_save_ticker_settings', 'dracka_ticker_settings_nonce');
+
+    $is_active = get_post_meta($post->ID, DRACKA_TICKER_ACTIVE_META_KEY, true) === '1';
+
+    echo '<label style="display:inline-flex;align-items:center;gap:8px">';
+    echo '<input type="checkbox" name="dracka_ticker_is_active" value="1"' . checked($is_active, true, false) . '>';
+    echo '<span>Show this ticker item</span>';
+    echo '</label>';
+    echo '<p class="description" style="margin-top:8px">Only active and published ticker items are shown in the News Ticker block.</p>';
+}
+
+/**
  * Renders the artwork metabox that links artwork to an album.
  *
  * It prints a nonce, loads the currently linked album, fetches all
@@ -1622,6 +1782,22 @@ function dracka_save_relationship_meta($post_id)
             } else {
                 delete_post_meta($post_id, DRACKA_SERIES_YEAR_META_KEY);
             }
+        }
+    }
+
+    if ($post_type === 'ticker') {
+        $valid_settings_nonce = isset($_POST['dracka_ticker_settings_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_ticker_settings_nonce'])), 'dracka_save_ticker_settings');
+        $valid_quick_edit_nonce = isset($_POST['_inline_edit']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_inline_edit'])), 'inlineeditnonce');
+
+        if (!$valid_settings_nonce && !$valid_quick_edit_nonce) return;
+        if (!current_user_can('edit_post', $post_id)) return;
+
+        $is_active = isset($_POST['dracka_ticker_is_active']) ? '1' : '';
+
+        if ($is_active === '1') {
+            update_post_meta($post_id, DRACKA_TICKER_ACTIVE_META_KEY, '1');
+        } else {
+            delete_post_meta($post_id, DRACKA_TICKER_ACTIVE_META_KEY);
         }
     }
 }
@@ -1910,6 +2086,111 @@ function dracka_logo_animation_admin_column_content($column, $post_id)
     }
 }
 add_action('manage_logo_animation_posts_custom_column', 'dracka_logo_animation_admin_column_content', 10, 2);
+
+/**
+ * Adds custom columns to ticker admin list.
+ *
+ * @param array<string, string> $columns Existing list columns.
+ * @return array<string, string>
+ */
+function dracka_ticker_admin_columns($columns)
+{
+    $new_columns = [];
+
+    foreach ($columns as $key => $label) {
+        $new_columns[$key] = $label;
+
+        if ($key === 'title') {
+            $new_columns['dracka_ticker_active'] = 'Active';
+        }
+    }
+
+    return $new_columns;
+}
+add_filter('manage_ticker_posts_columns', 'dracka_ticker_admin_columns');
+
+/**
+ * Renders ticker custom column values.
+ *
+ * @param string $column Column key.
+ * @param int    $post_id Current post ID.
+ * @return void
+ */
+function dracka_ticker_admin_column_content($column, $post_id)
+{
+    $post_id = (int) $post_id;
+
+    if ($column === 'dracka_ticker_active') {
+        $is_active = get_post_meta($post_id, DRACKA_TICKER_ACTIVE_META_KEY, true) === '1';
+        echo '<span class="dracka-ticker-active-state" data-active="' . esc_attr($is_active ? '1' : '0') . '">' . ($is_active ? 'Yes' : 'No') . '</span>';
+    }
+}
+add_action('manage_ticker_posts_custom_column', 'dracka_ticker_admin_column_content', 10, 2);
+
+/**
+ * Adds quick edit field for ticker active toggle.
+ *
+ * @param string $column_name Column key.
+ * @param string $post_type Current post type.
+ * @return void
+ */
+function dracka_ticker_quick_edit_custom_box($column_name, $post_type)
+{
+    if ($post_type !== 'ticker' || $column_name !== 'dracka_ticker_active') {
+        return;
+    }
+
+    echo '<fieldset class="inline-edit-col-right">';
+    echo '<div class="inline-edit-col">';
+    echo '<label class="alignleft">';
+    echo '<input type="checkbox" name="dracka_ticker_is_active" value="1">';
+    echo '<span class="checkbox-title">Active ticker item</span>';
+    echo '</label>';
+    echo '</div>';
+    echo '</fieldset>';
+}
+add_action('quick_edit_custom_box', 'dracka_ticker_quick_edit_custom_box', 10, 2);
+
+/**
+ * Syncs quick edit checkbox value from ticker row state.
+ *
+ * @return void
+ */
+function dracka_ticker_quick_edit_script()
+{
+    $screen = get_current_screen();
+
+    if (!$screen || $screen->base !== 'edit' || $screen->post_type !== 'ticker') {
+        return;
+    }
+
+?>
+    <script type="text/javascript">
+        (function($) {
+            var originalEdit = inlineEditPost.edit;
+
+            inlineEditPost.edit = function(id) {
+                originalEdit.apply(this, arguments);
+
+                var postId = 0;
+                if (typeof id === 'object') {
+                    postId = parseInt(this.getId(id), 10);
+                }
+
+                if (!postId) {
+                    return;
+                }
+
+                var $postRow = $('#post-' + postId);
+                var $editRow = $('#edit-' + postId);
+                var activeState = String($postRow.find('.column-dracka_ticker_active .dracka-ticker-active-state').data('active'));
+                $editRow.find('input[name="dracka_ticker_is_active"]').prop('checked', activeState === '1');
+            };
+        })(jQuery);
+    </script>
+<?php
+}
+add_action('admin_footer-edit.php', 'dracka_ticker_quick_edit_script');
 
 /**
  * Removes relationship meta from children linked to a removed parent.
