@@ -343,8 +343,19 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
     $cap_info = dracka_get_effective_cap($content_type, $max_items_cap);
     $total_published = $cap_info['total'];
     $effective_cap = $cap_info['effective'];
+
+    // Do not render any wrapper markup when there is no content.
+    if ($effective_cap < 1 || $total_published < 1) {
+        return '';
+    }
+
     $initial_render_count = min($initial_count, $effective_cap);
     $initial_query = new WP_Query(dracka_get_latest_content_query_args(0, $initial_render_count, $content_type, $sort_mode));
+
+    if (!$initial_query->have_posts()) {
+        return '';
+    }
+
     $next_offset = $initial_render_count;
     $has_more = $next_offset < $effective_cap;
     $reached_cap = !$has_more && $total_published > $effective_cap;
