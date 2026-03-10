@@ -10,7 +10,7 @@
   const SelectControl = components.SelectControl;
 
   blocks.registerBlockType('dracka/latest-issues', {
-    apiVersion: 2,
+    apiVersion: 3,
     title: __('Latest Issues', 'dracka'),
     description: __('Collapsible latest issues grid with incremental loading.', 'dracka'),
     icon: 'book-alt',

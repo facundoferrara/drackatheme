@@ -121,7 +121,7 @@ function dracka_register_blocks()
         );
 
         register_block_type($block_config['name'], [
-            'api_version'     => 2,
+            'api_version'     => 3,
             'editor_script'   => $block_config['editor_script'],
             'render_callback' => $block_config['render_cb'],
             'attributes'      => [
@@ -170,7 +170,7 @@ function dracka_register_blocks()
     );
 
     register_block_type('dracka/news-ticker', [
-        'api_version'     => 2,
+        'api_version'     => 3,
         'editor_script'   => 'dracka-news-ticker-block-editor',
         'render_callback' => 'dracka_render_news_ticker_block',
         'attributes'      => [
@@ -603,7 +603,9 @@ function dracka_render_news_ticker_block($attributes)
     }
 
     $separator = '<span class="dracka-news-ticker__separator" aria-hidden="true">&bull;</span>';
-    $ticker_line = implode($separator, $ticker_items);
+    $base_ticker_line = implode($separator, $ticker_items);
+    $repeat_count = max(2, (int) ceil(8 / max(1, count($ticker_items))));
+    $ticker_line = implode($separator, array_fill(0, $repeat_count, $base_ticker_line));
     $ticker_line = wp_kses($ticker_line, $allowed_html);
 
     ob_start();
@@ -611,8 +613,8 @@ function dracka_render_news_ticker_block($attributes)
     <section class="dracka-news-ticker" aria-label="News ticker" style="--dracka-news-ticker-duration: <?php echo esc_attr((string) $speed_seconds); ?>s;">
         <div class="dracka-news-ticker__viewport">
             <div class="dracka-news-ticker__track">
-                <div class="dracka-news-ticker__line"><?php echo $ticker_line; ?></div>
-                <div class="dracka-news-ticker__line" aria-hidden="true"><?php echo $ticker_line; ?></div>
+                <div class="dracka-news-ticker__line dracka-news-ticker__line--primary"><?php echo $ticker_line; ?></div>
+                <div class="dracka-news-ticker__line dracka-news-ticker__line--clone" aria-hidden="true"><?php echo $ticker_line; ?></div>
             </div>
         </div>
     </section>

@@ -10,7 +10,7 @@
   const SelectControl = components.SelectControl;
 
   blocks.registerBlockType('dracka/latest-artwork', {
-    apiVersion: 2,
+    apiVersion: 3,
     title: __('Latest Artwork', 'dracka'),
     description: __('Collapsible latest artwork grid with incremental loading.', 'dracka'),
     icon: 'format-gallery',

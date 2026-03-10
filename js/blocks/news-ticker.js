@@ -8,7 +8,7 @@
   const RangeControl = components.RangeControl;
 
   blocks.registerBlockType('dracka/news-ticker', {
-    apiVersion: 2,
+    apiVersion: 3,
     title: __('News Ticker', 'dracka'),
     description: __('Displays active ticker items as a continuous right-to-left marquee.', 'dracka'),
     icon: 'megaphone',
