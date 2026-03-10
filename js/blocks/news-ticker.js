@@ -1,4 +1,6 @@
 (function (blocks, element, i18n, blockEditor, components) {
+  // Editor-side block registration for a server-rendered news ticker block.
+  // The frontend animation loop and sanitized item output are produced in PHP/CSS.
   const el = element.createElement;
   const __ = i18n.__;
   const InspectorControls = blockEditor.InspectorControls;
@@ -21,6 +23,7 @@
       },
     },
     edit: function (props) {
+      // The editor only configures speed; ticker content comes from active ticker CPT entries.
       const attributes = props.attributes;
       const setAttributes = props.setAttributes;
 
@@ -56,6 +59,7 @@
       );
     },
     save: function () {
+      // Dynamic block: do not serialize static HTML in post content.
       return null;
     },
   });

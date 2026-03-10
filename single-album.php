@@ -26,9 +26,17 @@ $album_id = get_the_ID();
     <?php
     $artwork_items = new WP_Query([
         'post_type'      => 'artwork',
+        'post_status'    => 'publish',
         'posts_per_page' => -1,
-        'meta_key'       => 'dracka_album_id',
-        'meta_value'     => $album_id,
+        'no_found_rows'  => true,
+        'meta_query'     => [
+            [
+                'key'     => 'dracka_album_id',
+                'value'   => $album_id,
+                'compare' => '=',
+                'type'    => 'NUMERIC',
+            ],
+        ],
         'orderby'        => ['menu_order' => 'ASC', 'date' => 'DESC'],
     ]);
     ?>

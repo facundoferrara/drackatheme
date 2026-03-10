@@ -191,9 +191,41 @@ add_action('init', 'dracka_register_blocks');
  */
 function dracka_normalize_latest_sort_mode($sort_mode)
 {
+    if (!is_string($sort_mode) && !is_numeric($sort_mode)) {
+        return 'newest';
+    }
+
     $sort_mode = sanitize_key((string) $sort_mode);
 
     return in_array($sort_mode, ['newest', 'manual'], true) ? $sort_mode : 'newest';
+}
+
+/**
+ * Builds cache key for effective post count by post type.
+ *
+ * @param string $post_type Post type slug.
+ * @return string
+ */
+function dracka_get_effective_cap_cache_key($post_type)
+{
+    return 'dracka_post_count_' . sanitize_key((string) $post_type);
+}
+
+/**
+ * Returns the max number of related posts loaded in admin relation dropdowns.
+ *
+ * This prevents unbounded metabox queries from loading very large datasets
+ * into memory. Sites with unusually large catalogs can raise the cap with:
+ * add_filter('dracka_admin_relation_posts_limit', fn () => 5000);
+ *
+ * @return int
+ */
+function dracka_get_admin_relation_posts_limit()
+{
+    $default_limit = 1000;
+    $limit = (int) apply_filters('dracka_admin_relation_posts_limit', $default_limit);
+
+    return max(100, $limit);
 }
 
 /**
@@ -239,11 +271,41 @@ function dracka_get_latest_content_query_args($offset, $limit, $post_type, $sort
  */
 function dracka_get_effective_cap($post_type, $max_items_cap)
 {
-    $total = (int) wp_count_posts($post_type)->publish;
+    $cache_key = dracka_get_effective_cap_cache_key($post_type);
+    $total = wp_cache_get($cache_key, 'dracka_theme');
+
+    if ($total === false) {
+        $total = (int) wp_count_posts($post_type)->publish;
+        wp_cache_set($cache_key, $total, 'dracka_theme', MINUTE_IN_SECONDS * 10);
+    } else {
+        $total = (int) $total;
+    }
+
     $effective = $max_items_cap > 0 ? min($max_items_cap, $total) : $total;
 
     return compact('total', 'effective');
 }
+
+/**
+ * Invalidates cached post counts used for latest-content caps.
+ *
+ * @param int $post_id Post ID.
+ * @return void
+ */
+function dracka_invalidate_effective_cap_cache($post_id)
+{
+    $post_type = get_post_type((int) $post_id);
+
+    if (!is_string($post_type) || !in_array($post_type, ['issue', 'artwork'], true)) {
+        return;
+    }
+
+    $cache_key = dracka_get_effective_cap_cache_key($post_type);
+    wp_cache_delete($cache_key, 'dracka_theme');
+}
+add_action('save_post', 'dracka_invalidate_effective_cap_cache');
+add_action('deleted_post', 'dracka_invalidate_effective_cap_cache');
+add_action('trashed_post', 'dracka_invalidate_effective_cap_cache');
 
 /**
  * Builds query args for latest issue listings.
@@ -512,7 +574,8 @@ function dracka_render_news_ticker_block($attributes)
         'b'      => [],
         'i'      => [],
         'span'   => [
-            'class' => true,
+            'class'       => true,
+            'aria-hidden' => true,
         ],
     ];
 
@@ -540,16 +603,15 @@ function dracka_render_news_ticker_block($attributes)
 
     $separator = '<span class="dracka-news-ticker__separator" aria-hidden="true">&bull;</span>';
     $ticker_line = implode($separator, $ticker_items);
+    $ticker_line = wp_kses($ticker_line, $allowed_html);
 
     ob_start();
 ?>
     <section class="dracka-news-ticker" aria-label="News ticker" style="--dracka-news-ticker-duration: <?php echo esc_attr((string) $speed_seconds); ?>s;">
         <div class="dracka-news-ticker__viewport">
             <div class="dracka-news-ticker__track">
-                <div class="dracka-news-ticker__line"><?php echo $ticker_line; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
-                                                        ?></div>
-                <div class="dracka-news-ticker__line" aria-hidden="true"><?php echo $ticker_line; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
-                                                                            ?></div>
+                <div class="dracka-news-ticker__line"><?php echo $ticker_line; ?></div>
+                <div class="dracka-news-ticker__line" aria-hidden="true"><?php echo $ticker_line; ?></div>
             </div>
         </div>
     </section>
@@ -609,10 +671,14 @@ add_action('rest_api_init', 'dracka_register_rest_routes');
  *
  * @param WP_REST_Request $request      Active REST request.
  * @param string          $content_type Post type slug ('issue' or 'artwork').
- * @return WP_REST_Response
+ * @return WP_REST_Response|WP_Error
  */
 function dracka_rest_get_latest_content($request, $content_type)
 {
+    if (!in_array($content_type, ['issue', 'artwork'], true)) {
+        return new WP_Error('dracka_invalid_content_type', 'Unsupported content type.', ['status' => 400]);
+    }
+
     $offset = max(0, (int) $request->get_param('offset'));
     $limit = (int) $request->get_param('limit');
     $limit = max(1, min(24, $limit));
@@ -1355,12 +1421,14 @@ function dracka_render_series_metabox($post)
 
     $current_series = (int) get_post_meta($post->ID, 'dracka_series_id', true);
     $current_order = get_post_meta($post->ID, 'dracka_series_order', true);
+    $relation_posts_limit = dracka_get_admin_relation_posts_limit();
     $series_posts = get_posts([
         'post_type'      => 'series',
         'post_status'    => 'publish',
-        'posts_per_page' => -1,
+        'posts_per_page' => $relation_posts_limit,
         'orderby'        => 'title',
         'order'          => 'ASC',
+        'no_found_rows'  => true,
     ]);
 
     echo '<select name="dracka_series_id" style="width:100%">';
@@ -1630,12 +1698,14 @@ function dracka_render_album_metabox($post)
     wp_nonce_field('dracka_save_album_link', 'dracka_album_nonce');
 
     $current_album = (int) get_post_meta($post->ID, 'dracka_album_id', true);
+    $relation_posts_limit = dracka_get_admin_relation_posts_limit();
     $album_posts = get_posts([
         'post_type'      => 'album',
         'post_status'    => 'publish',
-        'posts_per_page' => -1,
+        'posts_per_page' => $relation_posts_limit,
         'orderby'        => 'title',
         'order'          => 'ASC',
+        'no_found_rows'  => true,
     ]);
 
     echo '<select name="dracka_album_id" style="width:100%">';
@@ -1741,8 +1811,8 @@ function dracka_save_relationship_meta($post_id)
         $is_active = isset($_POST['dracka_logo_is_active']) ? '1' : '';
 
         if ($is_active === '1') {
-            update_post_meta($post_id, DRACKA_LOGO_ACTIVE_META_KEY, '1');
             dracka_deactivate_other_logo_animation_posts($post_id);
+            update_post_meta($post_id, DRACKA_LOGO_ACTIVE_META_KEY, '1');
         } else {
             delete_post_meta($post_id, DRACKA_LOGO_ACTIVE_META_KEY);
         }
@@ -1903,6 +1973,9 @@ function dracka_is_valid_logo_webp($attachment_id)
 /**
  * Ensures only one logo animation post remains active.
  *
+ * This function is called before setting the current post active so the active
+ * flag remains exclusive across all logo animation posts.
+ *
  * @param int $active_post_id Active logo post ID.
  * @return void
  */
@@ -1918,6 +1991,7 @@ function dracka_deactivate_other_logo_animation_posts($active_post_id)
         'post_status'    => ['publish', 'future', 'draft', 'pending', 'private'],
         'posts_per_page' => -1,
         'fields'         => 'ids',
+        'no_found_rows'  => true,
         'post__not_in'   => [$active_post_id],
         'meta_query'     => [
             [

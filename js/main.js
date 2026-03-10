@@ -1,3 +1,9 @@
+/**
+ * Initializes mobile overlay panels, including button toggles, swipe-close, and scroll locking.
+ *
+ * The swipe gesture intentionally requires strong upward travel to avoid accidental closes
+ * while users scroll inside the panel.
+ */
 function setupMobilePanels() {
   const panelButtons = document.querySelectorAll('[data-panel-target]');
   const closeButtons = document.querySelectorAll('[data-panel-close]');
@@ -175,6 +181,14 @@ function setupMobilePanels() {
   });
 }
 
+/**
+ * Sets up probabilistic logo animation playback in the header.
+ *
+ * Behavior summary:
+ * - Uses a polling interval and trigger chance to keep animation occasional.
+ * - Skips playback while the tab is hidden or reduced-motion is enabled.
+ * - Reuses original file URLs so browser caching can prevent redundant downloads.
+ */
 function setupAnimatedLogo() {
   const logoElement = document.querySelector('.js-animated-logo');
 
@@ -280,7 +294,8 @@ function setupAnimatedLogo() {
       stopAnimation();
     };
 
-    animationImage.src = `${selectedUrl}${selectedUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+    // Keep native browser caching for animation files instead of forcing a unique URL each cycle.
+    animationImage.src = selectedUrl;
   };
 
   window.setInterval(maybePlayAnimation, Math.max(intervalMs, 1000));
@@ -292,6 +307,14 @@ function setupAnimatedLogo() {
   });
 }
 
+/**
+ * Wires a collapsible content block with animated expand/collapse transitions.
+ *
+ * This keeps max-height inline styles in sync with CSS transitions and updates
+ * aria-expanded so assistive technology receives the current open state.
+ *
+ * @param {HTMLElement} blockElement Collapsible block root element.
+ */
 function setupCollapsibleBlock(blockElement) {
   const toggleButton = blockElement.querySelector('.dracka-collapsible__toggle');
   const content = blockElement.querySelector('.dracka-collapsible__content');
@@ -336,11 +359,9 @@ function setupCollapsibleBlock(blockElement) {
     content.style.maxHeight = '0px';
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        content.classList.add('is-open');
-        content.style.maxHeight = `${content.scrollHeight}px`;
-        content.addEventListener('transitionend', finishExpand);
-      });
+      content.classList.add('is-open');
+      content.style.maxHeight = `${content.scrollHeight}px`;
+      content.addEventListener('transitionend', finishExpand);
     });
   };
 
@@ -375,6 +396,12 @@ function setupCollapsibleBlock(blockElement) {
   });
 }
 
+/**
+ * Verifies a block has at least one renderable card before interaction logic is attached.
+ *
+ * @param {HTMLElement} blockElement Block root element.
+ * @returns {boolean}
+ */
 function blockHasRenderableCards(blockElement) {
   const grid = blockElement.querySelector('[data-content-grid]');
 
@@ -387,6 +414,14 @@ function blockHasRenderableCards(blockElement) {
   );
 }
 
+/**
+ * Binds "show more" pagination behavior for latest-content blocks.
+ *
+ * The loader preserves server-generated card markup and progressively appends
+ * it while tracking offset/cap state in data attributes.
+ *
+ * @param {HTMLElement} blockElement Block root element.
+ */
 function setupLatestContentLoader(blockElement) {
   const showMoreButton = blockElement.querySelector('[data-show-more]');
   const grid = blockElement.querySelector('[data-content-grid]');

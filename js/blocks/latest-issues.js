@@ -1,4 +1,6 @@
 (function (blocks, element, i18n, blockEditor, components) {
+  // Editor-side block registration for a server-rendered latest-issues block.
+  // Frontend markup and pagination behavior are implemented in PHP + main.js.
   const el = element.createElement;
   const __ = i18n.__;
   const InspectorControls = blockEditor.InspectorControls;
@@ -51,6 +53,7 @@
       },
     },
     edit: function (props) {
+      // Inspector controls define fetch/pagination settings consumed by frontend scripts.
       const attributes = props.attributes;
       const setAttributes = props.setAttributes;
 
@@ -150,6 +153,7 @@
       );
     },
     save: function () {
+      // Dynamic block: rendered on the server, so no static save output is stored.
       return null;
     },
   });
