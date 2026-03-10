@@ -452,6 +452,8 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
         return '';
     }
 
+    $initial_cards_html = wp_kses_post($initial_cards_html);
+
     $next_offset = $initial_render_count;
     $has_more = $next_offset < $effective_cap;
     $reached_cap = !$has_more && $total_published > $effective_cap;
@@ -482,8 +484,7 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
 
         <div id="<?php echo esc_attr($content_id); ?>" class="dracka-collapsible__content" hidden>
             <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
-                <?php echo $initial_cards_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
-                ?>
+                <?php echo $initial_cards_html; ?>
             </div>
 
             <?php if ($has_more) : ?>
