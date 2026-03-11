@@ -275,7 +275,6 @@ main > h1 {
   cursor: pointer;
 }
 
-.series-single article,
 .issue-single article,
 .publication-single article,
 .album-single article,
@@ -287,7 +286,6 @@ main > h1 {
   margin-bottom: 2rem;
 }
 
-.series-single h1,
 .issue-single h1,
 .publication-single h1,
 .album-single h1,
@@ -301,7 +299,6 @@ main > h1 {
   margin-bottom: 1rem;
 }
 
-.series-thumb img,
 .issue-thumb img,
 .album-thumb img,
 .artwork-thumb img {
@@ -317,30 +314,132 @@ main > h1 {
   margin-bottom: 1rem;
 }
 
-.series-splash {
+/* =========================
+   SERIES HERO
+========================= */
+
+.series-hero {
   position: relative;
-  z-index: 0;
-  margin-bottom: 1.25rem;
-  border: 1px solid var(--color-panel);
-  border-radius: 3px;
   overflow: hidden;
-  background: var(--color-surface);
+  margin-bottom: 2rem;
 }
 
-.series-splash-image {
+.series-hero-splash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.series-hero-splash__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.series-hero-splash__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(11, 12, 13, 0.45) 0%,
+    rgba(11, 12, 13, 0.93) 100%
+  );
+}
+
+.series-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 2rem 1rem;
+}
+
+.series-hero-aside {
+  flex-shrink: 0;
+  display: grid;
+  gap: 0.8rem;
+  width: 50%;
+}
+
+.series-hero-cover {
+  width: 100%;
+}
+
+.series-hero-cover img {
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 3px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+.series-hero-info {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.series-hero-title {
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.series-status {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.series-status--ongoing,
+.series-status--publish {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.series-status--coming-soon {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.series-status--cancelled {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.series-status--finalized {
+  color: var(--color-muted);
+  background: rgba(154, 161, 168, 0.1);
+  border-color: rgba(154, 161, 168, 0.3);
 }
 
 .series-description {
-  margin-top: 0.75rem;
+  color: var(--color-text);
 }
 
 .series-meta-list {
-  margin-top: 1rem;
   display: grid;
   gap: 0.45rem;
+}
+
+.series-meta-list strong {
+  display: inline-block;
+  margin-right: 0.2rem;
 }
 
 .series-meta-list p {
@@ -348,7 +447,8 @@ main > h1 {
 }
 
 .series-issues {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
+  padding: 0 1rem;
 }
 
 .series-issues-header {
@@ -518,8 +618,7 @@ main > h1 {
   text-decoration: none;
 }
 
-.dracka-issues-card__image,
-.dracka-issues-card__placeholder {
+.dracka-issues-card__image {
   display: block;
   width: 100%;
   height: 100%;
@@ -528,6 +627,11 @@ main > h1 {
 }
 
 .dracka-issues-card__placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 130px;
+  object-fit: cover;
   background: linear-gradient(120deg, var(--color-panel), var(--color-surface));
 }
 
@@ -566,8 +670,7 @@ main > h1 {
   text-decoration: none;
 }
 
-.dracka-artwork-card__image,
-.dracka-artwork-card__placeholder {
+.dracka-artwork-card__image {
   display: block;
   width: 100%;
   height: 100%;
@@ -576,6 +679,11 @@ main > h1 {
 }
 
 .dracka-artwork-card__placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 130px;
+  object-fit: cover;
   background: linear-gradient(120deg, var(--color-panel), var(--color-surface));
 }
 
@@ -930,6 +1038,24 @@ main > h1 {
   color: var(--color-text);
 }
 
+/* =========================
+   HERO — 2-COLUMN (>=640px)
+========================= */
+
+@media (min-width: 640px) {
+  .series-hero-aside {
+    width: 200px;
+  }
+
+  .series-hero-cover {
+    width: 100%;
+  }
+
+  .series-issues {
+    padding: 0;
+  }
+}
+
 @media (max-width: 767px) {
   .site-header {
     --header-height: 80px;
@@ -968,10 +1094,6 @@ main > h1 {
     grid-column: 3;
     justify-self: end;
     margin-left: 0;
-  }
-
-  .series-issue-row {
-    grid-template-columns: 1fr;
   }
 
   .issue-single {
@@ -1014,8 +1136,12 @@ main > h1 {
 
 @media (min-width: 768px) {
 
-  .header-action {
+  .header-action--info {
     display: none;
+  }
+
+  .header-action--menu {
+    display: inline-flex;
   }
 
   .main-nav {
@@ -1045,5 +1171,17 @@ main > h1 {
 
   .dracka-artwork-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .series-hero-cover {
+    width: 100%;
+  }
+
+  .series-hero-aside {
+    width: 260px;
+  }
+
+  .series-hero-title {
+    font-size: 2rem;
   }
 }

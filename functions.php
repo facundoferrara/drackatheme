@@ -267,7 +267,7 @@ function dracka_get_latest_content_query_args($offset, $limit, $post_type, $sort
  *
  * @param string $post_type Post type to count.
  * @param int $max_items_cap Maximum items to show (0 = unlimited).
- * @return array{total: int, effective: int}
+ * @return array
  */
 function dracka_get_effective_cap($post_type, $max_items_cap)
 {
@@ -946,7 +946,7 @@ function dracka_register_content_types()
 add_action('init', 'dracka_register_content_types');
 
 /**
- * Registers Series taxonomies for genre and publication status.
+ * Registers Series taxonomies.
  *
  * @return void
  */
@@ -971,51 +971,93 @@ function dracka_register_series_taxonomies()
         'hierarchical'      => false,
         'rewrite'           => ['slug' => 'series-genre'],
     ]);
-
-    register_taxonomy('dracka_series_status', ['series'], [
-        'labels'            => [
-            'name'          => 'Statuses',
-            'singular_name' => 'Status',
-            'search_items'  => 'Search Statuses',
-            'all_items'     => 'All Statuses',
-            'edit_item'     => 'Edit Status',
-            'update_item'   => 'Update Status',
-            'add_new_item'  => 'Add New Status',
-            'new_item_name' => 'New Status Name',
-            'menu_name'     => 'Status',
-        ],
-        'public'            => true,
-        'show_ui'           => true,
-        'show_admin_column' => true,
-        'show_in_rest'      => true,
-        'hierarchical'      => false,
-        'rewrite'           => ['slug' => 'series-status'],
-    ]);
 }
 add_action('init', 'dracka_register_series_taxonomies');
 
 /**
- * Ensures default status terms exist for series status taxonomy.
+ * Returns custom status slugs/labels used by Series posts.
+ *
+ * @return array<string, string>
+ */
+function dracka_get_series_custom_statuses()
+{
+    return [
+        'ongoing'     => 'Ongoing',
+        'coming-soon' => 'Coming Soon',
+        'cancelled'   => 'Cancelled',
+        'finalized'   => 'Finalized',
+    ];
+}
+
+/**
+ * Returns public-facing statuses for Series frontend listings.
+ *
+ * @return array<int, string>
+ */
+function dracka_get_series_public_statuses()
+{
+    return array_merge(['publish'], array_keys(dracka_get_series_custom_statuses()));
+}
+
+/**
+ * Returns statuses that should appear in Issue->Series relation selectors.
+ *
+ * @return array<int, string>
+ */
+function dracka_get_series_editable_statuses()
+{
+    return array_values(array_unique(array_merge(
+        dracka_get_series_public_statuses(),
+        ['draft', 'pending', 'future', 'private']
+    )));
+}
+
+/**
+ * Registers custom editorial statuses for Series posts.
  *
  * @return void
  */
-function dracka_seed_series_status_terms()
+function dracka_register_series_post_statuses()
 {
-    $taxonomy = 'dracka_series_status';
-
-    if (!taxonomy_exists($taxonomy)) {
-        return;
-    }
-
-    $default_statuses = ['Ongoing', 'Coming Soon', 'Cancelled', 'Finalized'];
-
-    foreach ($default_statuses as $status_label) {
-        if (!term_exists($status_label, $taxonomy)) {
-            wp_insert_term($status_label, $taxonomy);
-        }
+    foreach (dracka_get_series_custom_statuses() as $status_slug => $status_label) {
+        register_post_status($status_slug, [
+            'label'                     => $status_label,
+            'label_count'               => _n_noop(
+                $status_label . ' <span class="count">(%s)</span>',
+                $status_label . ' <span class="count">(%s)</span>'
+            ),
+            'public'                    => true,
+            'internal'                  => false,
+            'protected'                 => false,
+            'private'                   => false,
+            'exclude_from_search'       => false,
+            'show_in_admin_all_list'    => true,
+            'show_in_admin_status_list' => true,
+            'show_in_rest'              => true,
+            'date_floating'             => false,
+        ]);
     }
 }
-add_action('init', 'dracka_seed_series_status_terms', 20);
+add_action('init', 'dracka_register_series_post_statuses', 20);
+
+/**
+ * Prevents custom Series statuses from being assigned to other post types.
+ *
+ * @param array<string, mixed> $data Prepared post data.
+ * @param array<string, mixed> $postarr Raw submitted post data.
+ * @return array<string, mixed>
+ */
+function dracka_limit_series_custom_status_scope($data, $postarr)
+{
+    $custom_statuses = array_keys(dracka_get_series_custom_statuses());
+
+    if (($data['post_type'] ?? '') !== 'series' && in_array($data['post_status'] ?? '', $custom_statuses, true)) {
+        $data['post_status'] = 'draft';
+    }
+
+    return $data;
+}
+add_filter('wp_insert_post_data', 'dracka_limit_series_custom_status_scope', 10, 2);
 
 /**
  * Allows SVG uploads for privileged content editors.
@@ -1412,7 +1454,7 @@ function dracka_render_series_splash_metabox($post)
  * Renders the issue metabox that links an issue to a series.
  *
  * It prints a nonce, fetches current linkage/order metadata, queries
- * all published series sorted by title, and renders a select input plus
+ * editable series statuses sorted by title, and renders a select input plus
  * numeric order field for manual sequence control.
  *
  * @param WP_Post $post Current issue post being edited.
@@ -1427,18 +1469,42 @@ function dracka_render_series_metabox($post)
     $relation_posts_limit = dracka_get_admin_relation_posts_limit();
     $series_posts = get_posts([
         'post_type'      => 'series',
-        'post_status'    => 'publish',
+        'post_status'    => dracka_get_series_editable_statuses(),
         'posts_per_page' => $relation_posts_limit,
         'orderby'        => 'title',
         'order'          => 'ASC',
         'no_found_rows'  => true,
     ]);
 
+    if ($current_series > 0) {
+        $listed_series_ids = array_map('intval', wp_list_pluck($series_posts, 'ID'));
+
+        if (!in_array($current_series, $listed_series_ids, true)) {
+            $current_series_post = get_post($current_series);
+
+            if ($current_series_post instanceof WP_Post && $current_series_post->post_type === 'series' && !in_array($current_series_post->post_status, ['trash', 'auto-draft'], true)) {
+                $series_posts[] = $current_series_post;
+
+                usort($series_posts, static function ($left, $right) {
+                    return strcasecmp($left->post_title, $right->post_title);
+                });
+            }
+        }
+    }
+
     echo '<select name="dracka_series_id" style="width:100%">';
     echo '<option value="">No series (standalone)</option>';
     foreach ($series_posts as $series) {
+        $status_object = get_post_status_object($series->post_status);
+        $status_label = $status_object ? $status_object->label : ucfirst((string) $series->post_status);
+        $series_option_label = $series->post_title;
+
+        if ($series->post_status !== 'publish') {
+            $series_option_label .= ' (' . $status_label . ')';
+        }
+
         $selected = $current_series === (int) $series->ID ? ' selected' : '';
-        echo '<option value="' . esc_attr($series->ID) . '"' . $selected . '>' . esc_html($series->post_title) . '</option>';
+        echo '<option value="' . esc_attr($series->ID) . '"' . $selected . '>' . esc_html($series_option_label) . '</option>';
     }
     echo '</select>';
 
@@ -1483,7 +1549,7 @@ function dracka_render_issue_pdf_metabox($post)
     echo '</div>';
 
     echo '<div>';
-    echo '<p style="margin:0 0 8px 0; font-size:12px; color:#666"><strong>Change PDF:</strong></p>';
+    echo '<p style="margin:0 0 8px 0; font-size:12px; color:#666"><strong>Select PDF:</strong></p>';
     echo '<input type="hidden" id="dracka_issue_pdf_id" name="dracka_issue_pdf_id" value="' . esc_attr($attachment_id) . '" />';
 
     // Render media uploader button
@@ -1493,15 +1559,69 @@ function dracka_render_issue_pdf_metabox($post)
     echo '<p style="margin:8px 0 0 0; font-size:11px; color:#999">';
     echo '1. Click the button to open Media Library<br>';
     echo '2. Select a PDF file<br>';
-    echo '3. Click "Update" button below to save';
+    echo '3. PDF changes save automatically';
     echo '</p>';
+    echo '<p id="dracka_issue_pdf_status" style="margin:8px 0 0 0; font-size:11px; color:#666">Selecting or removing a PDF saves immediately.</p>';
 
     // Inline script to handle media picker
     echo '<script type="text/javascript">';
     echo 'var drackaIssuePdfFrame;';
+    echo 'function drackaSetIssuePdfStatus(message, type) {';
+    echo 'var status = document.getElementById("dracka_issue_pdf_status");';
+    echo 'if (!status) {';
+    echo 'return;';
+    echo '}';
+    echo 'status.textContent = message;';
+    echo 'if (type === "success") {';
+    echo 'status.style.color = "#1d7f1d";';
+    echo '} else if (type === "error") {';
+    echo 'status.style.color = "#b32d2e";';
+    echo '} else {';
+    echo 'status.style.color = "#666";';
+    echo '}';
+    echo '}';
+    echo 'function drackaPersistIssuePdf(attachmentId, onSuccess, onError) {';
+    echo 'var postIdField = document.getElementById("post_ID");';
+    echo 'var nonceField = document.querySelector("input[name=\\"dracka_issue_pdf_nonce\\"]");';
+    echo 'if (!window.ajaxurl || !postIdField || !nonceField) {';
+    echo 'if (typeof onError === "function") {';
+    echo 'onError("Could not save PDF automatically. Missing editor context.");';
+    echo '}';
+    echo 'return;';
+    echo '}';
+    echo 'var formData = new FormData();';
+    echo 'formData.append("action", "dracka_save_issue_pdf_ajax");';
+    echo 'formData.append("post_id", postIdField.value);';
+    echo 'formData.append("attachment_id", String(attachmentId));';
+    echo 'formData.append("nonce", nonceField.value);';
+    echo 'fetch(window.ajaxurl, {';
+    echo 'method: "POST",';
+    echo 'credentials: "same-origin",';
+    echo 'body: formData';
+    echo '})';
+    echo '.then(function(response) { return response.json(); })';
+    echo '.then(function(payload) {';
+    echo 'if (payload && payload.success) {';
+    echo 'if (typeof onSuccess === "function") {';
+    echo 'onSuccess(payload.data || {});';
+    echo '}';
+    echo 'return;';
+    echo '}';
+    echo 'var message = payload && payload.data && payload.data.message ? payload.data.message : "Could not save PDF automatically.";';
+    echo 'throw new Error(message);';
+    echo '})';
+    echo '.catch(function(error) {';
+    echo 'if (typeof onError === "function") {';
+    echo 'onError(error.message || "Could not save PDF automatically.");';
+    echo '}';
+    echo '});';
+    echo '}';
     echo 'document.addEventListener("DOMContentLoaded", function() {';
     echo 'var btn = document.getElementById("dracka_upload_pdf_btn");';
-    echo 'if (btn) {';
+    echo 'var pdfField = document.getElementById("dracka_issue_pdf_id");';
+    echo 'if (!btn || !pdfField) {';
+    echo 'return;';
+    echo '}';
     echo 'btn.addEventListener("click", function(e) {';
     echo 'e.preventDefault();';
     echo 'if (drackaIssuePdfFrame) {';
@@ -1516,21 +1636,38 @@ function dracka_render_issue_pdf_metabox($post)
     echo '});';
     echo 'drackaIssuePdfFrame.on("select", function() {';
     echo 'var attachment = drackaIssuePdfFrame.state().get("selection").first().toJSON();';
-    echo 'if (attachment.mime === "application/pdf") {';
-    echo 'document.getElementById("dracka_issue_pdf_id").value = attachment.id;';
-    echo 'alert("PDF selected: " + attachment.filename + ". Click \\"Update\\" to save.");';
-    echo '} else {';
-    echo 'alert("Please select a PDF file.");';
+    echo 'if (attachment.mime !== "application/pdf") {';
+    echo 'drackaSetIssuePdfStatus("Please select a PDF file.", "error");';
+    echo 'return;';
     echo '}';
+    echo 'var previousValue = pdfField.value;';
+    echo 'drackaSetIssuePdfStatus("Saving selected PDF...", "info");';
+    echo 'drackaPersistIssuePdf(attachment.id, function() {';
+    echo 'pdfField.value = String(attachment.id);';
+    echo 'drackaSetIssuePdfStatus("PDF saved automatically: " + attachment.filename, "success");';
+    echo '}, function(message) {';
+    echo 'pdfField.value = previousValue;';
+    echo 'drackaSetIssuePdfStatus(message, "error");';
+    echo '});';
     echo '});';
     echo 'drackaIssuePdfFrame.open();';
     echo '});';
-    echo '}';
     echo '});';
     echo 'function dracka_clear_pdf_field() {';
+    echo 'var pdfField = document.getElementById("dracka_issue_pdf_id");';
+    echo 'if (!pdfField) {';
+    echo 'return;';
+    echo '}';
     echo 'if (confirm("Remove the PDF from this issue?")) {';
-    echo 'document.getElementById("dracka_issue_pdf_id").value = "";';
-    echo 'alert("PDF removed. Click \\"Update\\" to save.");';
+    echo 'var previousValue = pdfField.value;';
+    echo 'drackaSetIssuePdfStatus("Removing PDF...", "info");';
+    echo 'drackaPersistIssuePdf(0, function() {';
+    echo 'pdfField.value = "";';
+    echo 'drackaSetIssuePdfStatus("PDF removed and saved automatically.", "success");';
+    echo '}, function(message) {';
+    echo 'pdfField.value = previousValue;';
+    echo 'drackaSetIssuePdfStatus(message, "error");';
+    echo '});';
     echo '}';
     echo '}';
     echo '</script>';
@@ -1877,6 +2014,40 @@ function dracka_save_relationship_meta($post_id)
 add_action('save_post', 'dracka_save_relationship_meta');
 
 /**
+ * AJAX handler to persist issue PDF selection/removal immediately.
+ *
+ * @return void
+ */
+function dracka_ajax_save_issue_pdf()
+{
+    $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+    if (!$nonce || !wp_verify_nonce($nonce, 'dracka_save_issue_pdf')) {
+        wp_send_json_error(['message' => 'Security check failed.'], 403);
+    }
+
+    $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
+    if ($post_id <= 0 || get_post_type($post_id) !== 'issue') {
+        wp_send_json_error(['message' => 'Invalid issue.'], 400);
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        wp_send_json_error(['message' => 'You cannot edit this issue.'], 403);
+    }
+
+    $attachment_id = isset($_POST['attachment_id']) ? (int) $_POST['attachment_id'] : 0;
+    if ($attachment_id > 0 && !dracka_is_valid_issue_pdf($attachment_id)) {
+        wp_send_json_error(['message' => 'Please choose a valid PDF file.'], 400);
+    }
+
+    dracka_set_issue_pdf($post_id, $attachment_id);
+
+    wp_send_json_success([
+        'attachment_id' => $attachment_id,
+    ]);
+}
+add_action('wp_ajax_dracka_save_issue_pdf_ajax', 'dracka_ajax_save_issue_pdf');
+
+/**
  * Validates that an attachment is an image.
  *
  * @param int $attachment_id Attachment ID.
@@ -1897,7 +2068,7 @@ function dracka_is_valid_image_attachment($attachment_id)
  * Parses a comma-separated attachment ID list into normalized integers.
  *
  * @param string $raw_ids Comma-separated attachment IDs.
- * @return array<int>
+ * @return array
  */
 function dracka_parse_attachment_ids_csv($raw_ids)
 {
@@ -1922,7 +2093,7 @@ function dracka_parse_attachment_ids_csv($raw_ids)
  *
  * @param int    $post_id Post ID.
  * @param string $meta_key Meta key that stores IDs.
- * @return array<int>
+ * @return array
  */
 function dracka_get_logo_animation_attachment_ids($post_id, $meta_key)
 {
@@ -2050,7 +2221,7 @@ function dracka_get_active_logo_animation_post_id()
 /**
  * Returns logo animation payload for frontend header rendering.
  *
- * @return array{svg_url:string, animation_urls:array<int, string>}
+ * @return array
  */
 function dracka_get_active_logo_animation_data()
 {
@@ -2388,6 +2559,7 @@ function dracka_adjust_library_query($query)
             $query->set('post_type', 'series');
             $query->set('orderby', 'date');
             $query->set('order', 'DESC');
+            $query->set('post_status', dracka_get_series_public_statuses());
         }
     }
 
@@ -2577,7 +2749,7 @@ require get_template_directory() . '/inc/svg-icons.php';
 
 const DRACKA_ISSUE_PDF_META_KEY = 'dracka_issue_pdf_attachment_id';
 const DRACKA_ISSUE_PDF_NONCE_ACTION = 'dracka_create_issue_from_pdf';
-const DRACKA_ISSUE_PDF_NONCE_FIELD = 'dracka_issue_pdf_nonce';
+const DRACKA_ISSUE_PDF_NONCE_FIELD = 'dracka_create_issue_from_pdf_nonce';
 
 /**
  * Retrieves the attachment ID stored for an issue's PDF.
@@ -2686,6 +2858,11 @@ function dracka_handle_create_issue_from_pdf_form()
 {
     // Only run on POST to the right action and on admin
     if (!is_admin() || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+
+    $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+    if ($page !== 'dracka-create-issue-from-pdf') {
         return;
     }
 

@@ -3,8 +3,8 @@ get_header();
 $series_id = get_queried_object_id();
 
 $issues_page = isset($_GET['issues_page']) ? max(1, absint($_GET['issues_page'])) : 1;
-$issues_sort = isset($_GET['issues_sort']) ? strtolower(sanitize_text_field(wp_unslash($_GET['issues_sort']))) : 'new';
-$issues_sort = $issues_sort === 'old' ? 'old' : 'new';
+$issues_sort = isset($_GET['issues_sort']) ? strtolower(sanitize_text_field(wp_unslash($_GET['issues_sort']))) : 'old';
+$issues_sort = $issues_sort === 'new' ? 'new' : 'old';
 $issues_order = $issues_sort === 'old' ? 'ASC' : 'DESC';
 
 $issues = new WP_Query([
@@ -40,31 +40,58 @@ $issues = new WP_Query([
                 $genre_names = wp_list_pluck($genre_terms, 'name');
                 $genre_label = implode(', ', array_filter($genre_names));
             }
+
+            $status_slug     = get_post_status();
+            $custom_statuses = dracka_get_series_custom_statuses();
+            $status_label    = isset($custom_statuses[$status_slug])
+                ? $custom_statuses[$status_slug]
+                : ucfirst(str_replace('-', ' ', $status_slug));
             ?>
 
-            <?php if ($splash_id > 0) : ?>
-                <div class="series-splash">
-                    <?php echo wp_get_attachment_image($splash_id, 'full', false, ['class' => 'series-splash-image']); ?>
-                </div>
-            <?php endif; ?>
+            <div class="series-hero">
 
-            <article <?php post_class(); ?>>
-                <?php if (has_post_thumbnail()) : ?>
-                    <div class="series-thumb"><?php the_post_thumbnail('large'); ?></div>
+                <?php if ($splash_id > 0) : ?>
+                    <div class="series-hero-splash" aria-hidden="true">
+                        <?php echo wp_get_attachment_image($splash_id, 'full', false, ['class' => 'series-hero-splash__img', 'alt' => '']); ?>
+                        <div class="series-hero-splash__overlay"></div>
+                    </div>
                 <?php endif; ?>
 
-                <h1><?php the_title(); ?></h1>
+                <div class="series-hero-inner">
 
-                <div class="series-content series-description">
-                    <?php echo $series_description !== '' ? wpautop(esc_html($series_description)) : '<p>No description available.</p>'; ?>
+                    <div class="series-hero-aside">
+                        <?php if (has_post_thumbnail()) : ?>
+                            <div class="series-hero-cover">
+                                <?php the_post_thumbnail('large'); ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="series-meta-list">
+                            <p><strong>Author:</strong> <?php echo $series_author !== '' ? esc_html($series_author) : 'Unknown'; ?></p>
+                            <p><strong>Year:</strong> <?php echo $series_year !== '' ? esc_html($series_year) : 'N/A'; ?></p>
+                            <p><strong>Genre:</strong> <?php echo $genre_label !== '' ? esc_html($genre_label) : 'Unspecified'; ?></p>
+                        </div>
+                    </div>
+
+                    <div class="series-hero-info">
+                        <h1 class="series-hero-title"><?php the_title(); ?></h1>
+
+                        <span class="series-status series-status--<?php echo esc_attr($status_slug); ?>">
+                            <?php echo esc_html($status_label); ?>
+                        </span>
+
+                        <?php if ($series_description !== '') : ?>
+                            <div class="series-description">
+                                <?php echo wpautop(esc_html($series_description)); ?>
+                            </div>
+                        <?php endif; ?>
+
+                    </div>
+
                 </div>
 
-                <div class="series-meta-list">
-                    <p><strong>Author:</strong> <?php echo $series_author !== '' ? esc_html($series_author) : 'Unknown'; ?></p>
-                    <p><strong>Year:</strong> <?php echo $series_year !== '' ? esc_html($series_year) : 'N/A'; ?></p>
-                    <p><strong>Genre:</strong> <?php echo $genre_label !== '' ? esc_html($genre_label) : 'Unspecified'; ?></p>
-                </div>
-            </article>
+            </div>
+
         <?php endwhile; ?>
     <?php endif; ?>
 
