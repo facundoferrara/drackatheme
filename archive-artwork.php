@@ -2,12 +2,12 @@
 get_header();
 
 $active_tab = dracka_get_gallery_tab();
-// Only show artwork/standalones on the artwork archive
 if (! in_array($active_tab, ['artwork', 'standalones'], true)) {
     $active_tab = 'artwork';
 }
 
 $tabs = [
+    'albums'      => 'Albums',
     'artwork'     => 'Artwork',
     'standalones' => 'Standalones',
 ];
@@ -21,7 +21,7 @@ $empty_messages = [
 <main class="artwork-archive">
     <h1>Artwork</h1>
 
-    <nav class="archive-tabs" aria-label="Artwork sections">
+    <nav class="archive-tabs" aria-label="Gallery sections">
         <?php foreach ($tabs as $tab_slug => $tab_label) : ?>
             <?php
             $tab_classes = 'archive-tab';

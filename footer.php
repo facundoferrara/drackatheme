@@ -5,6 +5,20 @@
         <?php else : ?>
             <p class="site-footer__fallback">© <?php echo esc_html(gmdate('Y')); ?> <?php bloginfo('name'); ?></p>
         <?php endif; ?>
+
+        <?php if (has_nav_menu('social')) : ?>
+            <nav class="site-footer__social" aria-label="Social links">
+                <?php
+                wp_nav_menu([
+                    'theme_location' => 'social',
+                    'container'      => false,
+                    'menu_class'     => 'social-menu',
+                    'link_before'    => '<span class="social-icon">',
+                    'link_after'     => '</span>',
+                ]);
+                ?>
+            </nav>
+        <?php endif; ?>
     </div>
 </footer>
 

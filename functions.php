@@ -92,22 +92,31 @@ function dracka_register_blocks()
 {
     $blocks = [
         'issue' => [
-            'name'           => 'dracka/latest-issues',
+            'name'           => 'dracka/library',
             'editor_script'  => 'dracka-latest-issues-block-editor',
             'editor_js'      => '/js/blocks/latest-issues.js',
             'render_cb'      => 'dracka_render_latest_issues_block',
-            'default_title'  => 'Latest Issues',
+            'default_title'  => 'Library',
             'default_label'  => 'Go to library',
             'default_url'    => '/library/issues/',
         ],
         'artwork' => [
-            'name'           => 'dracka/latest-artwork',
+            'name'           => 'dracka/gallery',
             'editor_script'  => 'dracka-latest-artwork-block-editor',
             'editor_js'      => '/js/blocks/latest-artwork.js',
             'render_cb'      => 'dracka_render_latest_artwork_block',
-            'default_title'  => 'Latest Artwork',
+            'default_title'  => 'Gallery',
             'default_label'  => 'Go to gallery',
             'default_url'    => '/gallery/artwork/',
+        ],
+        'newsletter' => [
+            'name'           => 'dracka/newsletter',
+            'editor_script'  => 'dracka-newsletter-block-editor',
+            'editor_js'      => '/js/blocks/newsletter.js',
+            'render_cb'      => 'dracka_render_newsletter_block',
+            'default_title'  => 'Newsletter',
+            'default_label'  => 'Go to blog',
+            'default_url'    => '/blog/',
         ],
     ];
 
@@ -296,7 +305,7 @@ function dracka_invalidate_effective_cap_cache($post_id)
 {
     $post_type = get_post_type((int) $post_id);
 
-    if (!is_string($post_type) || !in_array($post_type, ['issue', 'artwork'], true)) {
+    if (!is_string($post_type) || !in_array($post_type, ['issue', 'artwork', 'post'], true)) {
         return;
     }
 
@@ -323,10 +332,10 @@ function dracka_get_latest_issue_query_args($offset, $limit, $sort_mode = 'newes
 /**
  * Renders a single content card for the collapsible homepage grid.
  *
- * Supports issues (with title overlay) and artwork (image only).
+ * Supports issues, artwork, and newsletter post cards.
  *
  * @param int    $post_id      Post ID.
- * @param string $content_type Content type slug ('issue' or 'artwork').
+ * @param string $content_type Content type slug ('issue', 'artwork', or 'post').
  * @return string
  */
 function dracka_render_content_card_markup($post_id, $content_type)
@@ -337,7 +346,14 @@ function dracka_render_content_card_markup($post_id, $content_type)
         return '';
     }
 
-    $css_prefix = $content_type === 'artwork' ? 'dracka-artwork' : 'dracka-issues';
+    if ($content_type === 'artwork') {
+        $css_prefix = 'dracka-artwork';
+    } elseif ($content_type === 'post') {
+        $css_prefix = 'dracka-newsletter';
+    } else {
+        $css_prefix = 'dracka-issues';
+    }
+
     $title = get_the_title($post_id);
     $permalink = get_permalink($post_id);
     $thumbnail = get_the_post_thumbnail(
@@ -360,6 +376,28 @@ function dracka_render_content_card_markup($post_id, $content_type)
             esc_attr($css_prefix),
             esc_url($permalink),
             $thumbnail
+        );
+    }
+
+    if ($content_type === 'post') {
+        $excerpt = trim((string) wp_strip_all_tags((string) get_the_excerpt($post_id)));
+        $excerpt_html = '';
+
+        if ($excerpt !== '') {
+            $excerpt_html = sprintf(
+                '<span class="%1$s-card__excerpt">%2$s</span>',
+                esc_attr($css_prefix),
+                esc_html($excerpt)
+            );
+        }
+
+        return sprintf(
+            '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link"><span class="%1$s-card__media">%3$s<span class="%1$s-card__title">%4$s</span></span>%5$s</a></article>',
+            esc_attr($css_prefix),
+            esc_url($permalink),
+            $thumbnail,
+            esc_html($title),
+            $excerpt_html
         );
     }
 
@@ -395,24 +433,50 @@ function dracka_render_artwork_card_markup($artwork_id)
 }
 
 /**
+ * Wrapper for newsletter card rendering.
+ *
+ * @param int $post_id Post ID.
+ * @return string
+ */
+function dracka_render_newsletter_card_markup($post_id)
+{
+    return dracka_render_content_card_markup($post_id, 'post');
+}
+
+/**
  * Renders a dynamic "Latest Content" collapsible block.
  *
- * Shared implementation for both issues and artwork homepage blocks.
+ * Shared implementation for issues, artwork, and newsletter homepage blocks.
  * Each block type passes its content_type to control query, markup,
  * REST endpoint, and CSS class prefixes.
  *
- * @param string              $content_type Post type slug ('issue' or 'artwork').
+ * @param string              $content_type Post type slug ('issue', 'artwork', or 'post').
  * @param array<string, mixed> $attributes  Block attributes.
  * @param array<string, string> $defaults   Default labels/URLs for this content type.
  * @return string
  */
 function dracka_render_latest_content_block($content_type, $attributes, $defaults)
 {
-    $css_prefix = $content_type === 'artwork' ? 'dracka-artwork' : 'dracka-issues';
-    $rest_slug  = $content_type === 'artwork' ? 'artwork' : 'issues';
+    $is_newsletter = $content_type === 'post';
+
+    if ($content_type === 'artwork') {
+        $css_prefix = 'dracka-artwork';
+        $rest_slug  = 'artwork';
+    } elseif ($content_type === 'post') {
+        $css_prefix = 'dracka-newsletter';
+        $rest_slug  = 'newsletter';
+    } else {
+        $css_prefix = 'dracka-issues';
+        $rest_slug  = 'issues';
+    }
 
     $title = isset($attributes['title']) ? sanitize_text_field($attributes['title']) : $defaults['title'];
     $initial_count = isset($attributes['initialCount']) ? max(1, (int) $attributes['initialCount']) : 8;
+
+    if ($is_newsletter) {
+        $initial_count = min($initial_count, 3);
+    }
+
     $increment = isset($attributes['increment']) ? max(1, (int) $attributes['increment']) : 8;
     $show_more_label = isset($attributes['showMoreLabel']) ? sanitize_text_field($attributes['showMoreLabel']) : 'Show more';
     $max_items_cap = isset($attributes['maxItemsCap']) ? max(0, (int) $attributes['maxItemsCap']) : 0;
@@ -440,24 +504,54 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
         return '';
     }
 
-    $initial_cards_html = '';
+    $initial_cards = [];
 
     while ($initial_query->have_posts()) {
         $initial_query->the_post();
-        $initial_cards_html .= dracka_render_content_card_markup((int) get_the_ID(), $content_type);
+        $initial_cards[] = dracka_render_content_card_markup((int) get_the_ID(), $content_type);
     }
     wp_reset_postdata();
 
-    if ($initial_cards_html === '') {
+    $initial_cards = array_values(array_filter($initial_cards));
+
+    if (empty($initial_cards)) {
         return '';
     }
-
-    $initial_cards_html = wp_kses_post($initial_cards_html);
 
     $next_offset = $initial_render_count;
     $has_more = $next_offset < $effective_cap;
     $reached_cap = !$has_more && $total_published > $effective_cap;
     $content_id = wp_unique_id('dracka-latest-' . $rest_slug . '-content-');
+    $initially_open = $is_newsletter;
+
+    if ($is_newsletter) {
+        $see_all_markup = sprintf(
+            '<div class="dracka-newsletter-card__action"><a class="dracka-newsletter-see-all" href="%1$s">%2$s</a></div>',
+            esc_url($go_to_library_url),
+            esc_html($go_to_library_label)
+        );
+
+        $last_card_index = count($initial_cards) - 1;
+
+        if ($last_card_index >= 0) {
+            $initial_cards[$last_card_index] = str_replace(
+                'class="dracka-newsletter-card"',
+                'class="dracka-newsletter-card dracka-newsletter-card--with-action"',
+                $initial_cards[$last_card_index]
+            );
+
+            $initial_cards[$last_card_index] = str_replace(
+                '</article>',
+                $see_all_markup . '</article>',
+                $initial_cards[$last_card_index]
+            );
+        }
+
+        $has_more = false;
+        $reached_cap = false;
+    }
+
+    $initial_cards_html = wp_kses_post(implode('', $initial_cards));
 
     ob_start();
 ?>
@@ -476,20 +570,24 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
         <button
             type="button"
             class="dracka-collapsible__toggle"
-            aria-expanded="false"
+            aria-expanded="<?php echo $initially_open ? 'true' : 'false'; ?>"
             aria-controls="<?php echo esc_attr($content_id); ?>">
             <span class="dracka-collapsible__arrow" aria-hidden="true"></span>
             <span class="dracka-collapsible__title"><?php echo esc_html($title); ?></span>
         </button>
 
-        <div id="<?php echo esc_attr($content_id); ?>" class="dracka-collapsible__content" hidden>
+        <div
+            id="<?php echo esc_attr($content_id); ?>"
+            class="dracka-collapsible__content<?php echo $initially_open ? ' is-open' : ''; ?>"
+            <?php if (!$initially_open) : ?>hidden<?php endif; ?>
+            <?php if ($initially_open) : ?>style="max-height: none; opacity: 1;" <?php endif; ?>>
             <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
                 <?php echo $initial_cards_html; ?>
             </div>
 
-            <?php if ($has_more) : ?>
+            <?php if (!$is_newsletter && $has_more) : ?>
                 <button type="button" class="<?php echo esc_attr($css_prefix); ?>-show-more" data-show-more><?php echo esc_html($show_more_label); ?></button>
-            <?php elseif ($reached_cap) : ?>
+            <?php elseif (!$is_newsletter && $reached_cap) : ?>
                 <a class="<?php echo esc_attr($css_prefix); ?>-go-library" href="<?php echo esc_url($go_to_library_url); ?>"><?php echo esc_html($go_to_library_label); ?></a>
             <?php endif; ?>
         </div>
@@ -507,7 +605,7 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
 function dracka_render_latest_issues_block($attributes)
 {
     return dracka_render_latest_content_block('issue', $attributes, [
-        'title'    => 'Latest Issues',
+        'title'    => 'Library',
         'go_label' => 'Go to library',
         'go_url'   => '/library/issues/',
     ]);
@@ -522,9 +620,24 @@ function dracka_render_latest_issues_block($attributes)
 function dracka_render_latest_artwork_block($attributes)
 {
     return dracka_render_latest_content_block('artwork', $attributes, [
-        'title'    => 'Latest Artwork',
+        'title'    => 'Gallery',
         'go_label' => 'Go to gallery',
         'go_url'   => '/gallery/artwork/',
+    ]);
+}
+
+/**
+ * Render callback for the Newsletter block.
+ *
+ * @param array<string, mixed> $attributes Block attributes.
+ * @return string
+ */
+function dracka_render_newsletter_block($attributes)
+{
+    return dracka_render_latest_content_block('post', $attributes, [
+        'title'    => 'Newsletter',
+        'go_label' => 'See all',
+        'go_url'   => '/blog/',
     ]);
 }
 
@@ -625,7 +738,7 @@ function dracka_render_news_ticker_block($attributes)
 /**
  * Registers REST routes used by dynamic frontend components.
  *
- * Both issues and artwork endpoints share the same argument schema
+ * Issues, artwork, and newsletter endpoints share the same argument schema
  * and are handled by a single callback with a content_type parameter.
  *
  * @return void
@@ -654,6 +767,7 @@ function dracka_register_rest_routes()
     $endpoints = [
         'issues'  => 'issue',
         'artwork' => 'artwork',
+        'newsletter' => 'post',
     ];
 
     foreach ($endpoints as $route_slug => $content_type) {
@@ -673,12 +787,12 @@ add_action('rest_api_init', 'dracka_register_rest_routes');
  * Shared REST callback returning latest content cards in chunks.
  *
  * @param WP_REST_Request $request      Active REST request.
- * @param string          $content_type Post type slug ('issue' or 'artwork').
+ * @param string          $content_type Post type slug ('issue', 'artwork', or 'post').
  * @return WP_REST_Response|WP_Error
  */
 function dracka_rest_get_latest_content($request, $content_type)
 {
-    if (!in_array($content_type, ['issue', 'artwork'], true)) {
+    if (!in_array($content_type, ['issue', 'artwork', 'post'], true)) {
         return new WP_Error('dracka_invalid_content_type', 'Unsupported content type.', ['status' => 400]);
     }
 

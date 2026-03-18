@@ -9,7 +9,7 @@
 
   blocks.registerBlockType('dracka/news-ticker', {
     apiVersion: 3,
-    title: __('News Ticker', 'dracka'),
+    title: __('Dracka News Ticker', 'dracka'),
     description: __('Displays active ticker items as a continuous right-to-left marquee.', 'dracka'),
     icon: 'megaphone',
     category: 'widgets',

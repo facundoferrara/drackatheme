@@ -9,9 +9,9 @@
   const RangeControl = components.RangeControl;
   const SelectControl = components.SelectControl;
 
-  blocks.registerBlockType('dracka/latest-artwork', {
+  blocks.registerBlockType('dracka/gallery', {
     apiVersion: 3,
-    title: __('Latest Artwork', 'dracka'),
+    title: __('Dracka Gallery', 'dracka'),
     description: __('Collapsible latest artwork grid with incremental loading.', 'dracka'),
     icon: 'format-gallery',
     category: 'widgets',
@@ -21,7 +21,7 @@
     attributes: {
       title: {
         type: 'string',
-        default: 'Latest Artwork',
+        default: 'Gallery',
       },
       initialCount: {
         type: 'number',
@@ -66,7 +66,7 @@
           el(
             PanelBody,
             {
-              title: __('Latest Artwork Settings', 'dracka'),
+              title: __('Gallery Settings', 'dracka'),
               initialOpen: true,
             },
             el(TextControl, {
@@ -148,7 +148,7 @@
         el(
           'div',
           { className: 'dracka-latest-artwork-block-editor-placeholder' },
-          __('Latest Artwork (dynamic): renders collapsed bar and loads artwork on the frontend.', 'dracka')
+          __('Gallery (dynamic): renders collapsed bar and loads artwork on the frontend.', 'dracka')
         )
       );
     },

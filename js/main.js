@@ -410,7 +410,7 @@ function blockHasRenderableCards(blockElement) {
   }
 
   return Boolean(
-    grid.querySelector('.dracka-issues-card, .dracka-artwork-card')
+    grid.querySelector('.dracka-issues-card, .dracka-artwork-card, .dracka-newsletter-card')
   );
 }
 
@@ -444,7 +444,16 @@ function setupLatestContentLoader(blockElement) {
   function replaceWithLibraryLink() {
     const linkElement = document.createElement('a');
     const isArtwork = blockElement.classList.contains('dracka-latest-artwork-block');
-    linkElement.className = isArtwork ? 'dracka-artwork-go-library' : 'dracka-issues-go-library';
+    const isNewsletter = blockElement.classList.contains('dracka-latest-newsletter-block');
+
+    if (isArtwork) {
+      linkElement.className = 'dracka-artwork-go-library';
+    } else if (isNewsletter) {
+      linkElement.className = 'dracka-newsletter-go-library';
+    } else {
+      linkElement.className = 'dracka-issues-go-library';
+    }
+
     linkElement.href = goLibraryUrl;
     linkElement.textContent = goLibraryLabel;
     showMoreButton.replaceWith(linkElement);
