@@ -74,6 +74,8 @@ input[type='button'],
 .dracka-collapsible__title,
 .dracka-artwork-show-more,
 .dracka-artwork-go-library,
+.dracka-newsletter-show-more,
+.dracka-newsletter-go-library,
 .dracka-issues-show-more,
 .dracka-issues-go-library,
 .main-nav a,
@@ -1163,7 +1165,7 @@ main > h1 {
 
 @media (max-width: 767px) {
   .site-header {
-    --header-height: 80px;
+    --header-height: 120px;
   }
 
   .header-inner {
