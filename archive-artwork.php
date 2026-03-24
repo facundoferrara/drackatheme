@@ -2,24 +2,22 @@
 get_header();
 
 $active_tab = dracka_get_gallery_tab();
-if (! in_array($active_tab, ['artwork', 'standalones'], true)) {
+if (! in_array($active_tab, ['artwork', 'albums'], true)) {
     $active_tab = 'artwork';
 }
 
 $tabs = [
-    'albums'      => 'Albums',
-    'artwork'     => 'Artwork',
-    'standalones' => 'Standalones',
+    'artwork' => 'Artwork',
+    'albums'  => 'Albums',
 ];
 
 $empty_messages = [
-    'artwork'     => 'No artwork yet.',
-    'standalones' => 'No standalone artwork yet.',
+    'artwork' => 'No artwork yet.',
 ];
 ?>
 
 <main class="artwork-archive">
-    <h1>Artwork</h1>
+    <h1>Gallery</h1>
 
     <nav class="archive-tabs" aria-label="Gallery sections">
         <?php foreach ($tabs as $tab_slug => $tab_label) : ?>
@@ -47,9 +45,8 @@ $empty_messages = [
         <div class="artwork-grid">
             <?php while (have_posts()) : the_post(); ?>
                 <article <?php post_class('artwork-card'); ?>>
-                    <h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
                     <?php if (has_post_thumbnail()) : ?>
-                        <div class="artwork-thumb"><?php the_post_thumbnail('medium'); ?></div>
+                        <a class="artwork-thumb" href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr(get_the_title()); ?>"><?php the_post_thumbnail('medium'); ?></a>
                     <?php endif; ?>
                     <div class="artwork-excerpt"><?php the_excerpt(); ?></div>
                 </article>
@@ -58,7 +55,7 @@ $empty_messages = [
 
         <?php the_posts_pagination(); ?>
     <?php else : ?>
-        <p>No artwork yet.</p>
+        <p><?php echo esc_html($empty_messages[$active_tab] ?? 'No artwork yet.'); ?></p>
     <?php endif; ?>
 </main>
 

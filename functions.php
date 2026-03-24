@@ -1324,19 +1324,32 @@ function dracka_add_tab_rewrite_rules()
     );
 
     add_rewrite_rule(
-        '^gallery/(albums|artwork|standalones)/?$',
+        '^gallery/(albums|artwork)/?$',
         'index.php?post_type=album&dracka_gallery_tab=$matches[1]',
         'top'
     );
 
     add_rewrite_rule(
-        '^gallery/(albums|artwork|standalones)/page/([0-9]{1,})/?$',
+        '^gallery/(albums|artwork)/page/([0-9]{1,})/?$',
         'index.php?post_type=album&dracka_gallery_tab=$matches[1]&paged=$matches[2]',
         'top'
     );
 
+    // Legacy support for removed standalone gallery tab.
+    add_rewrite_rule(
+        '^gallery/standalones/?$',
+        'index.php?post_type=album&dracka_gallery_tab=artwork',
+        'top'
+    );
+
+    add_rewrite_rule(
+        '^gallery/standalones/page/([0-9]{1,})/?$',
+        'index.php?post_type=album&dracka_gallery_tab=artwork&paged=$matches[1]',
+        'top'
+    );
+
     // Flush rewrite rules when rule set version changes
-    $rewrite_rules_version = '2026-02-19';
+    $rewrite_rules_version = '2026-03-24';
     if (get_option('dracka_rewrite_rules_version') !== $rewrite_rules_version) {
         flush_rewrite_rules();
         update_option('dracka_rewrite_rules_version', $rewrite_rules_version);
@@ -1369,10 +1382,10 @@ function dracka_get_library_tab()
 function dracka_get_gallery_tab()
 {
     $tab = get_query_var('dracka_gallery_tab');
-    $allowed_tabs = ['albums', 'artwork', 'standalones'];
+    $allowed_tabs = ['albums', 'artwork'];
 
     if (!is_string($tab) || !in_array($tab, $allowed_tabs, true)) {
-        return 'albums';
+        return 'artwork';
     }
 
     return $tab;
@@ -2703,28 +2716,12 @@ function dracka_adjust_library_query($query)
     if ($query->is_post_type_archive('album')) {
         $tab = dracka_get_gallery_tab();
 
-        if ($tab === 'artwork') {
-            $query->set('post_type', 'artwork');
-            $query->set('orderby', 'date');
-            $query->set('order', 'DESC');
-        } elseif ($tab === 'standalones') {
-            $query->set('post_type', 'artwork');
-            $query->set('orderby', 'date');
-            $query->set('order', 'DESC');
-            $query->set('meta_query', [
-                'relation' => 'OR',
-                [
-                    'key'     => 'dracka_album_id',
-                    'compare' => 'NOT EXISTS',
-                ],
-                [
-                    'key'     => 'dracka_album_id',
-                    'value'   => '',
-                    'compare' => '=',
-                ],
-            ]);
-        } else {
+        if ($tab === 'albums') {
             $query->set('post_type', 'album');
+            $query->set('orderby', 'date');
+            $query->set('order', 'DESC');
+        } else {
+            $query->set('post_type', 'artwork');
             $query->set('orderby', 'date');
             $query->set('order', 'DESC');
         }
@@ -2756,6 +2753,17 @@ function dracka_redirect_archive_urls()
     global $wp;
 
     $request_path = isset($wp->request) ? trim((string) $wp->request, '/') : '';
+
+    if (preg_match('#^gallery/standalones(?:/page/([0-9]{1,}))?$#', $request_path, $matches)) {
+        $target = home_url('/gallery/artwork/');
+
+        if (!empty($matches[1])) {
+            $target = home_url('/gallery/artwork/page/' . (int) $matches[1] . '/');
+        }
+
+        wp_safe_redirect($target, 301);
+        exit;
+    }
 
     if (preg_match('#^series(?:/page/([0-9]{1,}))?$#', $request_path, $matches)) {
         $target = home_url('/library/series/');
@@ -2801,9 +2809,9 @@ function dracka_redirect_archive_urls()
     }
 
     if (is_post_type_archive('album') && !get_query_var('dracka_gallery_tab')) {
-        $target = home_url('/gallery/albums/');
+        $target = home_url('/gallery/artwork/');
         if ($paged > 1) {
-            $target = home_url('/gallery/albums/page/' . $paged . '/');
+            $target = home_url('/gallery/artwork/page/' . $paged . '/');
         }
 
         wp_safe_redirect($target, 301);
