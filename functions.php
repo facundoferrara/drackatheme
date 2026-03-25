@@ -1441,9 +1441,9 @@ function dracka_add_relationship_metaboxes()
     );
 
     add_meta_box(
-        'dracka_issue_pdf',
-        'PDF Flipbook',
-        'dracka_render_issue_pdf_metabox',
+        'dracka_issue_access',
+        'Issue Access',
+        'dracka_render_issue_access_metabox',
         ['issue'],
         'side',
         'default'
@@ -1672,163 +1672,118 @@ function dracka_render_series_metabox($post)
 }
 
 /**
- * Renders the issue metabox for PDF attachment selection/replacement.
- *
- * Shows the currently attached PDF (if any) with a link to view it,
- * and provides a media picker for replacing or attaching a new PDF.
+ * Renders the issue metabox for access mode and lock configuration.
  *
  * @param WP_Post $post Current issue post being edited.
  * @return void
  */
-function dracka_render_issue_pdf_metabox($post)
+function dracka_render_issue_access_metabox($post)
 {
-    wp_nonce_field('dracka_save_issue_pdf', 'dracka_issue_pdf_nonce');
+    wp_nonce_field('dracka_save_issue_access', 'dracka_issue_access_nonce');
 
-    $attachment_id = dracka_get_issue_pdf($post->ID);
-    $pdf_url = dracka_get_issue_pdf_url($post->ID);
+    $mode = dracka_get_issue_access_mode($post->ID);
+    $book_id = (int) get_post_meta($post->ID, DRACKA_ISSUE_FLIPBOOK_ID_META_KEY, true);
+    $patreon_url = (string) get_post_meta($post->ID, DRACKA_ISSUE_PATREON_URL_META_KEY, true);
+    $lock_image_id = (int) get_post_meta($post->ID, DRACKA_ISSUE_PATREON_IMAGE_META_KEY, true);
+    $lock_image_preview = $lock_image_id > 0
+        ? wp_get_attachment_image($lock_image_id, 'medium', false, ['style' => 'display:block;width:100%;height:auto;border-radius:3px'])
+        : '';
+    $books = dracka_get_dearflip_book_options();
 
-    echo '<div style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee">';
-    echo '<p style="margin:0 0 8px 0; font-size:12px; color:#666"><strong>Current Flipbook PDF:</strong></p>';
-    if ($attachment_id && $pdf_url) {
-        $attachment = get_post($attachment_id);
-        echo '<p style="margin:0 0 8px 0; word-break:break-word">';
-        echo '<a href="' . esc_url($pdf_url) . '" target="_blank" style="color:#0073aa; text-decoration:underline">';
-        echo esc_html($attachment->post_title ?? 'PDF File');
-        echo '</a>';
-        echo '</p>';
+    echo '<p style="margin-top:0">';
+    echo '<label for="dracka_issue_access_mode" style="display:block;margin-bottom:4px"><strong>Access Mode</strong></label>';
+    echo '<select id="dracka_issue_access_mode" name="dracka_issue_access_mode" style="width:100%">';
+    echo '<option value="flipbook"' . selected($mode, 'flipbook', false) . '>Flipbook</option>';
+    echo '<option value="patreon"' . selected($mode, 'patreon', false) . '>Patreon Lock</option>';
+    echo '</select>';
+    echo '</p>';
 
-        echo '<button type="button" class="button button-small button-link-delete" onclick="dracka_clear_pdf_field()" style="margin-top:5px">';
-        echo 'Remove PDF';
-        echo '</button>';
+    echo '<div id="dracka_issue_flipbook_fields" style="margin:12px 0">';
+    echo '<label for="dracka_issue_flipbook_id" style="display:block;margin-bottom:4px"><strong>DearFlip Book</strong></label>';
+    echo '<select id="dracka_issue_flipbook_id" name="dracka_issue_flipbook_id" style="width:100%">';
+    echo '<option value="">Select a book</option>';
+
+    if (!empty($books)) {
+        foreach ($books as $book) {
+            $status_suffix = '';
+            if (!empty($book['status']) && $book['status'] !== 'publish') {
+                $status_suffix = ' (' . $book['status'] . ')';
+            }
+
+            echo '<option value="' . esc_attr($book['id']) . '"' . selected($book_id, (int) $book['id'], false) . '>';
+            echo esc_html($book['label'] . $status_suffix);
+            echo '</option>';
+        }
+    }
+
+    echo '</select>';
+    if (empty($books)) {
+        echo '<p class="description" style="margin-top:6px">No DearFlip books found. Activate DearFlip and create at least one book.</p>';
     } else {
-        echo '<p style="margin:0; color:#999; font-style:italic">No PDF selected</p>';
+        echo '<p class="description" style="margin-top:6px">Choose an existing DearFlip book to render on this issue page.</p>';
     }
     echo '</div>';
 
-    echo '<div>';
-    echo '<p style="margin:0 0 8px 0; font-size:12px; color:#666"><strong>Select PDF:</strong></p>';
-    echo '<input type="hidden" id="dracka_issue_pdf_id" name="dracka_issue_pdf_id" value="' . esc_attr($attachment_id) . '" />';
+    echo '<div id="dracka_issue_patreon_fields" style="margin:12px 0">';
+    echo '<label for="dracka_issue_patreon_url" style="display:block;margin-bottom:4px"><strong>Patreon URL</strong></label>';
+    echo '<input type="url" id="dracka_issue_patreon_url" name="dracka_issue_patreon_url" value="' . esc_attr($patreon_url) . '" style="width:100%" placeholder="https://www.patreon.com/your-page">';
 
-    // Render media uploader button
-    echo '<button type="button" class="button button-primary" id="dracka_upload_pdf_btn" style="width:100%; margin-bottom:10px">';
-    echo 'Select PDF from Media Library';
-    echo '</button>';
-    echo '<p style="margin:8px 0 0 0; font-size:11px; color:#999">';
-    echo '1. Click the button to open Media Library<br>';
-    echo '2. Select a PDF file<br>';
-    echo '3. PDF changes save automatically';
-    echo '</p>';
-    echo '<p id="dracka_issue_pdf_status" style="margin:8px 0 0 0; font-size:11px; color:#666">Selecting or removing a PDF saves immediately.</p>';
-
-    // Inline script to handle media picker
-    echo '<script type="text/javascript">';
-    echo 'var drackaIssuePdfFrame;';
-    echo 'function drackaSetIssuePdfStatus(message, type) {';
-    echo 'var status = document.getElementById("dracka_issue_pdf_status");';
-    echo 'if (!status) {';
-    echo 'return;';
-    echo '}';
-    echo 'status.textContent = message;';
-    echo 'if (type === "success") {';
-    echo 'status.style.color = "#1d7f1d";';
-    echo '} else if (type === "error") {';
-    echo 'status.style.color = "#b32d2e";';
-    echo '} else {';
-    echo 'status.style.color = "#666";';
-    echo '}';
-    echo '}';
-    echo 'function drackaPersistIssuePdf(attachmentId, onSuccess, onError) {';
-    echo 'var postIdField = document.getElementById("post_ID");';
-    echo 'var nonceField = document.querySelector("input[name=\\"dracka_issue_pdf_nonce\\"]");';
-    echo 'if (!window.ajaxurl || !postIdField || !nonceField) {';
-    echo 'if (typeof onError === "function") {';
-    echo 'onError("Could not save PDF automatically. Missing editor context.");';
-    echo '}';
-    echo 'return;';
-    echo '}';
-    echo 'var formData = new FormData();';
-    echo 'formData.append("action", "dracka_save_issue_pdf_ajax");';
-    echo 'formData.append("post_id", postIdField.value);';
-    echo 'formData.append("attachment_id", String(attachmentId));';
-    echo 'formData.append("nonce", nonceField.value);';
-    echo 'fetch(window.ajaxurl, {';
-    echo 'method: "POST",';
-    echo 'credentials: "same-origin",';
-    echo 'body: formData';
-    echo '})';
-    echo '.then(function(response) { return response.json(); })';
-    echo '.then(function(payload) {';
-    echo 'if (payload && payload.success) {';
-    echo 'if (typeof onSuccess === "function") {';
-    echo 'onSuccess(payload.data || {});';
-    echo '}';
-    echo 'return;';
-    echo '}';
-    echo 'var message = payload && payload.data && payload.data.message ? payload.data.message : "Could not save PDF automatically.";';
-    echo 'throw new Error(message);';
-    echo '})';
-    echo '.catch(function(error) {';
-    echo 'if (typeof onError === "function") {';
-    echo 'onError(error.message || "Could not save PDF automatically.");';
-    echo '}';
-    echo '});';
-    echo '}';
-    echo 'document.addEventListener("DOMContentLoaded", function() {';
-    echo 'var btn = document.getElementById("dracka_upload_pdf_btn");';
-    echo 'var pdfField = document.getElementById("dracka_issue_pdf_id");';
-    echo 'if (!btn || !pdfField) {';
-    echo 'return;';
-    echo '}';
-    echo 'btn.addEventListener("click", function(e) {';
-    echo 'e.preventDefault();';
-    echo 'if (drackaIssuePdfFrame) {';
-    echo 'drackaIssuePdfFrame.open();';
-    echo 'return;';
-    echo '}';
-    echo 'drackaIssuePdfFrame = wp.media({';
-    echo 'title: "Select PDF",';
-    echo 'library: { type: "application/pdf" },';
-    echo 'button: { text: "Use this PDF" },';
-    echo 'multiple: false,';
-    echo '});';
-    echo 'drackaIssuePdfFrame.on("select", function() {';
-    echo 'var attachment = drackaIssuePdfFrame.state().get("selection").first().toJSON();';
-    echo 'if (attachment.mime !== "application/pdf") {';
-    echo 'drackaSetIssuePdfStatus("Please select a PDF file.", "error");';
-    echo 'return;';
-    echo '}';
-    echo 'var previousValue = pdfField.value;';
-    echo 'drackaSetIssuePdfStatus("Saving selected PDF...", "info");';
-    echo 'drackaPersistIssuePdf(attachment.id, function() {';
-    echo 'pdfField.value = String(attachment.id);';
-    echo 'drackaSetIssuePdfStatus("PDF saved automatically: " + attachment.filename, "success");';
-    echo '}, function(message) {';
-    echo 'pdfField.value = previousValue;';
-    echo 'drackaSetIssuePdfStatus(message, "error");';
-    echo '});';
-    echo '});';
-    echo 'drackaIssuePdfFrame.open();';
-    echo '});';
-    echo '});';
-    echo 'function dracka_clear_pdf_field() {';
-    echo 'var pdfField = document.getElementById("dracka_issue_pdf_id");';
-    echo 'if (!pdfField) {';
-    echo 'return;';
-    echo '}';
-    echo 'if (confirm("Remove the PDF from this issue?")) {';
-    echo 'var previousValue = pdfField.value;';
-    echo 'drackaSetIssuePdfStatus("Removing PDF...", "info");';
-    echo 'drackaPersistIssuePdf(0, function() {';
-    echo 'pdfField.value = "";';
-    echo 'drackaSetIssuePdfStatus("PDF removed and saved automatically.", "success");';
-    echo '}, function(message) {';
-    echo 'pdfField.value = previousValue;';
-    echo 'drackaSetIssuePdfStatus(message, "error");';
-    echo '});';
-    echo '}';
-    echo '}';
-    echo '</script>';
+    echo '<p style="margin:10px 0 6px"><strong>Lock Image</strong></p>';
+    echo '<input type="hidden" id="dracka_issue_patreon_image_id" name="dracka_issue_patreon_image_id" value="' . esc_attr($lock_image_id) . '">';
+    echo '<div id="dracka_issue_patreon_image_preview" style="margin-bottom:10px">';
+    echo $lock_image_preview ?: '<div style="padding:12px;border:1px dashed #ccd0d4;border-radius:3px;color:#666">No image selected.</div>';
     echo '</div>';
+    echo '<p style="display:flex;gap:8px">';
+    echo '<button type="button" class="button button-primary" id="dracka_select_issue_patreon_image_btn">Select Image</button>';
+    echo '<button type="button" class="button" id="dracka_remove_issue_patreon_image_btn">Remove Image</button>';
+    echo '</p>';
+    echo '<p class="description">Image shown before the Patreon CTA link.</p>';
+    echo '</div>';
+
+    echo '<script type="text/javascript">';
+    echo 'document.addEventListener("DOMContentLoaded", function() {';
+    echo 'var modeField = document.getElementById("dracka_issue_access_mode");';
+    echo 'var flipbookFields = document.getElementById("dracka_issue_flipbook_fields");';
+    echo 'var patreonFields = document.getElementById("dracka_issue_patreon_fields");';
+    echo 'var imageInput = document.getElementById("dracka_issue_patreon_image_id");';
+    echo 'var imagePreview = document.getElementById("dracka_issue_patreon_image_preview");';
+    echo 'var selectImageBtn = document.getElementById("dracka_select_issue_patreon_image_btn");';
+    echo 'var removeImageBtn = document.getElementById("dracka_remove_issue_patreon_image_btn");';
+    echo 'var frame;';
+    echo 'if (!modeField || !flipbookFields || !patreonFields || !imageInput || !imagePreview || !selectImageBtn || !removeImageBtn) {';
+    echo 'return;';
+    echo '}';
+
+    echo 'function updateModeFields() {';
+    echo 'var isPatreon = modeField.value === "patreon";';
+    echo 'patreonFields.style.display = isPatreon ? "block" : "none";';
+    echo 'flipbookFields.style.display = isPatreon ? "none" : "block";';
+    echo '}';
+
+    echo 'modeField.addEventListener("change", updateModeFields);';
+    echo 'updateModeFields();';
+
+    echo 'selectImageBtn.addEventListener("click", function(e) {';
+    echo 'e.preventDefault();';
+    echo 'if (frame) { frame.open(); return; }';
+    echo 'frame = wp.media({ title: "Select Lock Image", library: { type: "image" }, button: { text: "Use this image" }, multiple: false });';
+    echo 'frame.on("select", function() {';
+    echo 'var attachment = frame.state().get("selection").first().toJSON();';
+    echo 'if (!attachment || attachment.type !== "image") { alert("Please select an image file."); return; }';
+    echo 'imageInput.value = String(attachment.id);';
+    echo 'var src = attachment.sizes && attachment.sizes.medium ? attachment.sizes.medium.url : attachment.url;';
+    echo 'imagePreview.innerHTML = "<img src=\\"" + src + "\\" alt=\\"Patreon lock image\\" style=\\"display:block;width:100%;height:auto;border-radius:3px\\">";';
+    echo '});';
+    echo 'frame.open();';
+    echo '});';
+
+    echo 'removeImageBtn.addEventListener("click", function(e) {';
+    echo 'e.preventDefault();';
+    echo 'imageInput.value = "";';
+    echo 'imagePreview.innerHTML = "<div style=\\"padding:12px;border:1px dashed #ccd0d4;border-radius:3px;color:#666\\">No image selected.</div>";';
+    echo '});';
+    echo '});';
+    echo '</script>';
 }
 
 /**
@@ -2051,15 +2006,46 @@ function dracka_save_relationship_meta($post_id)
             }
         }
 
-        // Save Issue PDF (independent of series nonce)
-        if (isset($_POST['dracka_issue_pdf_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_issue_pdf_nonce'])), 'dracka_save_issue_pdf')) {
-            if (isset($_POST['dracka_issue_pdf_id'])) {
-                $attachment_id = (int) $_POST['dracka_issue_pdf_id'];
-                if ($attachment_id > 0 && dracka_is_valid_issue_pdf($attachment_id)) {
-                    dracka_set_issue_pdf($post_id, $attachment_id);
+        // Save issue access mode and related fields.
+        if (isset($_POST['dracka_issue_access_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_issue_access_nonce'])), 'dracka_save_issue_access')) {
+            $mode = isset($_POST['dracka_issue_access_mode'])
+                ? sanitize_key(wp_unslash($_POST['dracka_issue_access_mode']))
+                : 'flipbook';
+
+            if (!in_array($mode, ['flipbook', 'patreon'], true)) {
+                $mode = 'flipbook';
+            }
+
+            update_post_meta($post_id, DRACKA_ISSUE_ACCESS_MODE_META_KEY, $mode);
+
+            if ($mode === 'flipbook') {
+                $book_id = isset($_POST['dracka_issue_flipbook_id']) ? (int) $_POST['dracka_issue_flipbook_id'] : 0;
+                if ($book_id > 0) {
+                    update_post_meta($post_id, DRACKA_ISSUE_FLIPBOOK_ID_META_KEY, $book_id);
                 } else {
-                    dracka_set_issue_pdf($post_id, 0);
+                    delete_post_meta($post_id, DRACKA_ISSUE_FLIPBOOK_ID_META_KEY);
                 }
+
+                delete_post_meta($post_id, DRACKA_ISSUE_PATREON_URL_META_KEY);
+                delete_post_meta($post_id, DRACKA_ISSUE_PATREON_IMAGE_META_KEY);
+            } else {
+                $patreon_url = isset($_POST['dracka_issue_patreon_url'])
+                    ? esc_url_raw(wp_unslash($_POST['dracka_issue_patreon_url']))
+                    : '';
+                if ($patreon_url !== '') {
+                    update_post_meta($post_id, DRACKA_ISSUE_PATREON_URL_META_KEY, $patreon_url);
+                } else {
+                    delete_post_meta($post_id, DRACKA_ISSUE_PATREON_URL_META_KEY);
+                }
+
+                $lock_image_id = isset($_POST['dracka_issue_patreon_image_id']) ? (int) $_POST['dracka_issue_patreon_image_id'] : 0;
+                if ($lock_image_id > 0 && dracka_is_valid_image_attachment($lock_image_id)) {
+                    update_post_meta($post_id, DRACKA_ISSUE_PATREON_IMAGE_META_KEY, $lock_image_id);
+                } else {
+                    delete_post_meta($post_id, DRACKA_ISSUE_PATREON_IMAGE_META_KEY);
+                }
+
+                delete_post_meta($post_id, DRACKA_ISSUE_FLIPBOOK_ID_META_KEY);
             }
         }
     }
@@ -2169,40 +2155,6 @@ function dracka_save_relationship_meta($post_id)
     }
 }
 add_action('save_post', 'dracka_save_relationship_meta');
-
-/**
- * AJAX handler to persist issue PDF selection/removal immediately.
- *
- * @return void
- */
-function dracka_ajax_save_issue_pdf()
-{
-    $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
-    if (!$nonce || !wp_verify_nonce($nonce, 'dracka_save_issue_pdf')) {
-        wp_send_json_error(['message' => 'Security check failed.'], 403);
-    }
-
-    $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
-    if ($post_id <= 0 || get_post_type($post_id) !== 'issue') {
-        wp_send_json_error(['message' => 'Invalid issue.'], 400);
-    }
-
-    if (!current_user_can('edit_post', $post_id)) {
-        wp_send_json_error(['message' => 'You cannot edit this issue.'], 403);
-    }
-
-    $attachment_id = isset($_POST['attachment_id']) ? (int) $_POST['attachment_id'] : 0;
-    if ($attachment_id > 0 && !dracka_is_valid_issue_pdf($attachment_id)) {
-        wp_send_json_error(['message' => 'Please choose a valid PDF file.'], 400);
-    }
-
-    dracka_set_issue_pdf($post_id, $attachment_id);
-
-    wp_send_json_success([
-        'attachment_id' => $attachment_id,
-    ]);
-}
-add_action('wp_ajax_dracka_save_issue_pdf_ajax', 'dracka_ajax_save_issue_pdf');
 
 /**
  * Validates that an attachment is an image.
@@ -2893,278 +2845,134 @@ add_filter('walker_nav_menu_start_el', 'dracka_social_icons', 10, 4);
 require get_template_directory() . '/inc/svg-icons.php';
 
 /**
- * Issue PDF Module: Stores and manages PDF attachments for issue posts.
- *
- * This module handles the creation of issues from PDFs, storage of PDF
- * attachment metadata, and rendering of DearFlip flipbooks on issue pages.
+ * Issue access module for flipbook and Patreon lock modes.
  */
 
-const DRACKA_ISSUE_PDF_META_KEY = 'dracka_issue_pdf_attachment_id';
-const DRACKA_ISSUE_PDF_NONCE_ACTION = 'dracka_create_issue_from_pdf';
-const DRACKA_ISSUE_PDF_NONCE_FIELD = 'dracka_create_issue_from_pdf_nonce';
+const DRACKA_ISSUE_ACCESS_MODE_META_KEY = 'dracka_issue_access_mode';
+const DRACKA_ISSUE_FLIPBOOK_ID_META_KEY = 'dracka_issue_flipbook_id';
+const DRACKA_ISSUE_PATREON_URL_META_KEY = 'dracka_issue_patreon_url';
+const DRACKA_ISSUE_PATREON_IMAGE_META_KEY = 'dracka_issue_patreon_image_id';
 
 /**
- * Retrieves the attachment ID stored for an issue's PDF.
+ * Returns normalized issue access mode.
  *
  * @param int $issue_id Issue post ID.
- * @return int Attachment ID, or 0 if not set.
+ * @return string
  */
-function dracka_get_issue_pdf($issue_id)
+function dracka_get_issue_access_mode($issue_id)
 {
-    return (int) get_post_meta($issue_id, DRACKA_ISSUE_PDF_META_KEY, true);
+    $mode = (string) get_post_meta((int) $issue_id, DRACKA_ISSUE_ACCESS_MODE_META_KEY, true);
+    return in_array($mode, ['flipbook', 'patreon'], true) ? $mode : 'flipbook';
 }
 
 /**
- * Updates the attachment ID for an issue's PDF.
+ * Returns DearFlip post types to query for book references.
  *
- * @param int $issue_id Issue post ID.
- * @param int $attachment_id Media attachment ID, or 0 to remove.
- * @return bool True on success, false on failure.
+ * @return array
  */
-function dracka_set_issue_pdf($issue_id, $attachment_id)
+function dracka_get_dearflip_book_post_types()
 {
-    $attachment_id = (int) $attachment_id;
+    $default_types = ['dflip', 'dearflip', 'dflip-books', 'flipbook'];
+    $post_types = apply_filters('dracka_dearflip_book_post_types', $default_types);
 
-    if ($attachment_id > 0) {
-        return (bool) update_post_meta($issue_id, DRACKA_ISSUE_PDF_META_KEY, $attachment_id);
-    } else {
-        return (bool) delete_post_meta($issue_id, DRACKA_ISSUE_PDF_META_KEY);
-    }
-}
-
-/**
- * Validates that an attachment is a PDF.
- *
- * @param int $attachment_id Attachment post ID.
- * @return bool True if valid PDF, false otherwise.
- */
-function dracka_is_valid_issue_pdf($attachment_id)
-{
-    if (!$attachment_id) {
-        return false;
+    if (!is_array($post_types)) {
+        return [];
     }
 
-    $mime_type = get_post_mime_type($attachment_id);
-    return $mime_type === 'application/pdf';
+    $post_types = array_values(array_unique(array_filter(array_map('sanitize_key', $post_types))));
+
+    return array_values(array_filter($post_types, 'post_type_exists'));
 }
 
 /**
- * Retrieves the URL of an issue's PDF attachment.
+ * Extracts source URL from a DearFlip book post.
  *
- * @param int $issue_id Issue post ID.
- * @return string PDF URL, or empty string if not set or invalid.
+ * @param WP_Post $book DearFlip book post.
+ * @return string
  */
-function dracka_get_issue_pdf_url($issue_id)
+function dracka_extract_dearflip_source_url($book)
 {
-    $attachment_id = dracka_get_issue_pdf($issue_id);
-
-    if (!$attachment_id || !dracka_is_valid_issue_pdf($attachment_id)) {
+    if (!$book instanceof WP_Post) {
         return '';
     }
 
-    return wp_get_attachment_url($attachment_id);
-}
-
-/**
- * Registers the admin action pages and handles PDF-to-Issue creation flow.
- *
- * This adds a "Create Issue from PDF" admin page under Issues post type
- * and registers both the display handler and form submission handler.
- *
- * @return void
- */
-function dracka_register_create_issue_from_pdf_page()
-{
-    add_action('admin_init', 'dracka_handle_create_issue_from_pdf_form');
-    add_action('admin_menu', 'dracka_add_create_issue_from_pdf_menu');
-}
-add_action('init', 'dracka_register_create_issue_from_pdf_page');
-
-/**
- * Adds the "Create Issue from PDF" admin menu item under Issues.
- *
- * @return void
- */
-function dracka_add_create_issue_from_pdf_menu()
-{
-    add_submenu_page(
-        'edit.php?post_type=issue',
-        'Create from PDF',
-        'Create from PDF',
-        'manage_options',
-        'dracka-create-issue-from-pdf',
-        'dracka_render_create_issue_from_pdf_page'
-    );
-}
-
-/**
- * Handles the form submission for PDF-to-Issue creation.
- *
- * Validates nonce and permissions, checks for uploaded file, validates
- * PDF MIME type, creates the issue post, and attaches the PDF.
- * Redirects with success/error messages based on outcome.
- *
- * @return void
- */
-function dracka_handle_create_issue_from_pdf_form()
-{
-    // Only run on POST to the right action and on admin
-    if (!is_admin() || $_SERVER['REQUEST_METHOD'] !== 'POST') {
-        return;
-    }
-
-    $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
-    if ($page !== 'dracka-create-issue-from-pdf') {
-        return;
-    }
-
-    if (!isset($_POST[DRACKA_ISSUE_PDF_NONCE_FIELD]) || !isset($_POST['post_type']) || sanitize_key(wp_unslash($_POST['post_type'])) !== 'issue') {
-        return;
-    }
-
-    $nonce = sanitize_text_field(wp_unslash($_POST[DRACKA_ISSUE_PDF_NONCE_FIELD]));
-
-    if (!wp_verify_nonce($nonce, DRACKA_ISSUE_PDF_NONCE_ACTION)) {
-        wp_die('Nonce verification failed');
-    }
-
-    if (!current_user_can('manage_options')) {
-        wp_die('Insufficient permissions');
-    }
-
-    // Check for file upload
-    if (empty($_FILES['dracka_pdf_file'])) {
-        wp_safe_redirect(add_query_arg('dracka_error', 'no_file', admin_url('admin.php?page=dracka-create-issue-from-pdf')));
-        exit;
-    }
-
-    $file = $_FILES['dracka_pdf_file'];
-
-    // Validate MIME type using server-side check instead of client-reported type
-    $file_type_info = wp_check_filetype(basename($file['name']), ['pdf' => 'application/pdf']);
-
-    if (empty($file_type_info['type'])) {
-        wp_safe_redirect(add_query_arg('dracka_error', 'invalid_type', admin_url('admin.php?page=dracka-create-issue-from-pdf')));
-        exit;
-    }
-
-    // Require WP_Filesystem for file handling
-    require_once ABSPATH . 'wp-admin/includes/file.php';
-    require_once ABSPATH . 'wp-admin/includes/image.php';
-
-    // Handle the file upload via WordPress Media
-    $attachment_id = media_handle_upload('dracka_pdf_file', 0);
-
-    if (is_wp_error($attachment_id)) {
-        wp_safe_redirect(add_query_arg('dracka_error', 'upload_failed', admin_url('admin.php?page=dracka-create-issue-from-pdf')));
-        exit;
-    }
-
-    // Get issue title from form input
-    $issue_title = isset($_POST['dracka_issue_title']) ? sanitize_text_field(wp_unslash($_POST['dracka_issue_title'])) : '';
-
-    if (empty($issue_title)) {
-        // Fallback to filename (without extension)
-        $file_name = sanitize_file_name($file['name']);
-        $issue_title = pathinfo($file_name, PATHINFO_FILENAME);
-    }
-
-    // Create the issue post
-    $issue_id = wp_insert_post([
-        'post_type'   => 'issue',
-        'post_title'  => $issue_title,
-        'post_status' => 'draft',
-        'post_author' => get_current_user_id(),
+    $meta_keys = apply_filters('dracka_dearflip_source_meta_keys', [
+        '_dflip_source',
+        'dflip_source',
+        'source',
+        'pdf_source',
+        'pdf_url',
+        'attachment_id',
     ]);
 
-    if (is_wp_error($issue_id)) {
-        // Clean up uploaded file if post creation fails
-        wp_delete_attachment($attachment_id, true);
-        wp_safe_redirect(add_query_arg('dracka_error', 'post_creation_failed', admin_url('admin.php?page=dracka-create-issue-from-pdf')));
-        exit;
+    if (is_array($meta_keys)) {
+        foreach ($meta_keys as $key) {
+            $key = sanitize_key((string) $key);
+            if ($key === '') {
+                continue;
+            }
+
+            $value = get_post_meta($book->ID, $key, true);
+            if (is_numeric($value)) {
+                $attachment_url = wp_get_attachment_url((int) $value);
+                if (is_string($attachment_url) && $attachment_url !== '') {
+                    return esc_url_raw($attachment_url);
+                }
+            }
+
+            if (is_string($value)) {
+                $value = trim($value);
+                if ($value !== '' && wp_http_validate_url($value)) {
+                    return esc_url_raw($value);
+                }
+            }
+        }
     }
 
-    // Attach PDF to the issue
-    dracka_set_issue_pdf($issue_id, $attachment_id);
+    if (preg_match('/\[dflip\s+([^\]]+)\]/i', (string) $book->post_content, $matches) === 1) {
+        $attrs = shortcode_parse_atts($matches[1]);
+        if (is_array($attrs) && !empty($attrs['source']) && is_string($attrs['source']) && wp_http_validate_url($attrs['source'])) {
+            return esc_url_raw($attrs['source']);
+        }
+    }
 
-    // Redirect to the new issue for editing, with success message
-    wp_safe_redirect(add_query_arg('dracka_success', '1', get_edit_post_link($issue_id, 'raw')));
-    exit;
+    return '';
 }
 
 /**
- * Renders the "Create Issue from PDF" admin page.
+ * Lists available DearFlip books for issue selection.
  *
- * Displays a form for uploading/selecting a PDF and entering an issue title.
- * Shows success/error messages from query parameters.
- *
- * @return void
+ * @return array
  */
-function dracka_render_create_issue_from_pdf_page()
+function dracka_get_dearflip_book_options()
 {
-    // Check permissions
-    if (!current_user_can('manage_options')) {
-        wp_die('Insufficient permissions');
+    $book_post_types = dracka_get_dearflip_book_post_types();
+    if (empty($book_post_types)) {
+        return [];
     }
 
-    $error_map = [
-        'no_file'                => 'Please select a PDF file to upload.',
-        'invalid_type'           => 'The selected file must be a PDF.',
-        'upload_failed'          => 'File upload failed. Please try again.',
-        'post_creation_failed'   => 'Failed to create the issue post. Please try again.',
-    ];
+    $books = get_posts([
+        'post_type'      => $book_post_types,
+        'post_status'    => ['publish', 'draft', 'pending', 'private', 'future'],
+        'posts_per_page' => -1,
+        'orderby'        => 'title',
+        'order'          => 'ASC',
+        'no_found_rows'  => true,
+    ]);
 
-    $error = isset($_GET['dracka_error']) ? sanitize_text_field(wp_unslash($_GET['dracka_error'])) : '';
-    $success = isset($_GET['dracka_success']) ? true : false;
-?>
-    <div class="wrap">
-        <h1>Create Issue from PDF</h1>
+    $options = [];
+    foreach ($books as $book) {
+        if (!$book instanceof WP_Post) {
+            continue;
+        }
 
-        <?php if ($success) : ?>
-            <div class="notice notice-success is-dismissible">
-                <p>Issue created successfully! You can now edit it below to set the series, order, and add additional content.</p>
-            </div>
-        <?php endif; ?>
+        $options[] = [
+            'id'         => (int) $book->ID,
+            'label'      => $book->post_title !== '' ? $book->post_title : 'Untitled Book #' . (int) $book->ID,
+            'status'     => (string) $book->post_status,
+            'source_url' => dracka_extract_dearflip_source_url($book),
+        ];
+    }
 
-        <?php if ($error && isset($error_map[$error])) : ?>
-            <div class="notice notice-error is-dismissible">
-                <p><?php echo esc_html($error_map[$error]); ?></p>
-            </div>
-        <?php endif; ?>
-
-        <form method="post" enctype="multipart/form-data">
-            <?php wp_nonce_field(DRACKA_ISSUE_PDF_NONCE_ACTION, DRACKA_ISSUE_PDF_NONCE_FIELD); ?>
-            <input type="hidden" name="post_type" value="issue" />
-
-            <table class="form-table">
-                <tr>
-                    <th scope="row"><label for="dracka_pdf_file">PDF File *</label></th>
-                    <td>
-                        <input type="file" id="dracka_pdf_file" name="dracka_pdf_file" accept="application/pdf" required />
-                        <p class="description">Upload a PDF file to convert into an issue.</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="dracka_issue_title">Issue Title</label></th>
-                    <td>
-                        <input type="text" id="dracka_issue_title" name="dracka_issue_title" class="regular-text" />
-                        <p class="description">Leave empty to use the PDF filename. You can edit the title after creation.</p>
-                    </td>
-                </tr>
-            </table>
-
-            <?php submit_button('Create Issue'); ?>
-        </form>
-
-        <hr />
-
-        <h2>Next Steps</h2>
-        <ol>
-            <li>Upload your PDF and create the issue.</li>
-            <li>Edit the issue to assign it to a series and set the series order.</li>
-            <li>Add any additional content like description or featured image.</li>
-            <li>Publish the issue when ready.</li>
-        </ol>
-    </div>
-<?php
+    return $options;
 }

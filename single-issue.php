@@ -3,7 +3,10 @@ get_header();
 $series_id = (int) get_post_meta(get_the_ID(), 'dracka_series_id', true);
 $series_link = $series_id ? get_permalink($series_id) : '';
 $issue_id = get_the_ID();
-$pdf_attachment_id = dracka_get_issue_pdf($issue_id);
+$access_mode = dracka_get_issue_access_mode($issue_id);
+$flipbook_id = (int) get_post_meta($issue_id, DRACKA_ISSUE_FLIPBOOK_ID_META_KEY, true);
+$patreon_url = (string) get_post_meta($issue_id, DRACKA_ISSUE_PATREON_URL_META_KEY, true);
+$patreon_image_id = (int) get_post_meta($issue_id, DRACKA_ISSUE_PATREON_IMAGE_META_KEY, true);
 ?>
 
 <main class="issue-single">
@@ -18,26 +21,35 @@ $pdf_attachment_id = dracka_get_issue_pdf($issue_id);
 
                 <div class="issue-content">
                     <?php
-                    // Render DearFlip flipbook if PDF is attached and DearFlip plugin is active
-                    if ($pdf_attachment_id && shortcode_exists('dflip')) {
-                        $pdf_url = dracka_get_issue_pdf_url($issue_id);
-                        if ($pdf_url) {
-                            echo do_shortcode('[dflip source="' . esc_attr($pdf_url) . '"]');
-                        } else {
-                            echo '<div class="issue-error">';
-                            echo '<p><strong>PDF Not Found</strong></p>';
-                            echo '<p>The PDF file for this issue could not be found.</p>';
+                    if ($access_mode === 'patreon') {
+                        if ($patreon_image_id > 0) {
+                            echo '<div class="issue-patreon-image">';
+                            echo wp_get_attachment_image($patreon_image_id, 'large');
                             echo '</div>';
                         }
-                    } elseif ($pdf_attachment_id) {
-                        // PDF is attached but DearFlip is not available
+
+                        if ($patreon_url !== '') {
+                            echo '<p class="issue-patreon-cta">';
+                            echo '<a class="button" href="' . esc_url($patreon_url) . '" target="_blank" rel="noopener noreferrer">Join Patreon to unlock this issue</a>';
+                            echo '</p>';
+                        } else {
+                            echo '<div class="issue-error">';
+                            echo '<p><strong>Patreon Link Not Configured</strong></p>';
+                            echo '<p>This issue is set to Patreon lock mode, but no Patreon URL was configured.</p>';
+                            echo '</div>';
+                        }
+                    } elseif ($flipbook_id > 0 && shortcode_exists('dflip')) {
+                        echo do_shortcode('[dflip id="' . esc_attr((string) $flipbook_id) . '"]');
+                    } elseif ($flipbook_id > 0) {
                         echo '<div class="issue-error">';
                         echo '<p><strong>DearFlip Flipbook Plugin Not Available</strong></p>';
                         echo '<p>The DearFlip plugin is required to display this issue as a flipbook. Please ensure the plugin is installed and activated.</p>';
                         echo '</div>';
                     } else {
-                        // No PDF attached; fallback to regular content
-                        the_content();
+                        echo '<div class="issue-error">';
+                        echo '<p><strong>Flipbook Not Configured</strong></p>';
+                        echo '<p>This issue has no selected DearFlip book yet.</p>';
+                        echo '</div>';
                     }
                     ?>
                 </div>
