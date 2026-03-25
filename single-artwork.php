@@ -8,13 +8,7 @@ $album_link = $album_id ? get_permalink($album_id) : '';
     <?php if (have_posts()) : ?>
         <?php while (have_posts()) : the_post(); ?>
             <article <?php post_class(); ?>>
-                <div class="card-badges">
-                    <span class="content-badge">Artwork</span>
-                    <?php if (!$album_id) : ?>
-                        <span class="content-badge content-badge--muted">Standalone</span>
-                    <?php endif; ?>
-                </div>
-                <h1><?php the_title(); ?></h1>
+                <h1 class="artwork-single__title"><?php the_title(); ?></h1>
 
                 <?php if ($album_link) : ?>
                     <p class="artwork-album">Album: <a href="<?php echo esc_url($album_link); ?>"><?php echo esc_html(get_the_title($album_id)); ?></a></p>
@@ -31,6 +25,8 @@ $album_link = $album_id ? get_permalink($album_id) : '';
         <?php endwhile; ?>
     <?php endif; ?>
 </main>
+
+<?php get_template_part('template-parts/comments-box', null, ['initially_open' => true]); ?>
 
 <?php
 get_footer();

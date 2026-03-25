@@ -10,12 +10,6 @@ $pdf_attachment_id = dracka_get_issue_pdf($issue_id);
     <?php if (have_posts()) : ?>
         <?php while (have_posts()) : the_post(); ?>
             <article <?php post_class(); ?>>
-                <div class="card-badges">
-                    <span class="content-badge">Issue</span>
-                    <?php if (!$series_id) : ?>
-                        <span class="content-badge content-badge--muted">Standalone</span>
-                    <?php endif; ?>
-                </div>
                 <h1><?php the_title(); ?></h1>
 
                 <?php if ($series_link) : ?>
@@ -51,6 +45,8 @@ $pdf_attachment_id = dracka_get_issue_pdf($issue_id);
         <?php endwhile; ?>
     <?php endif; ?>
 </main>
+
+<?php get_template_part('template-parts/comments-box', null, ['initially_open' => false]); ?>
 
 <?php
 get_footer();

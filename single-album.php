@@ -7,10 +7,7 @@ $album_id = get_the_ID();
     <?php if (have_posts()) : ?>
         <?php while (have_posts()) : the_post(); ?>
             <article <?php post_class(); ?>>
-                <div class="card-badges">
-                    <span class="content-badge">Album</span>
-                </div>
-                <h1><?php the_title(); ?></h1>
+                <h1 class="album-single__title"><?php the_title(); ?></h1>
 
                 <?php if (has_post_thumbnail()) : ?>
                     <div class="album-thumb"><?php the_post_thumbnail('large'); ?></div>
@@ -52,12 +49,6 @@ $album_id = get_the_ID();
                     $artwork_is_standalone = $artwork_album_id <= 0;
                     ?>
                     <article <?php post_class('artwork-card'); ?>>
-                        <div class="card-badges">
-                            <span class="content-badge">Artwork</span>
-                            <?php if ($artwork_is_standalone) : ?>
-                                <span class="content-badge content-badge--muted">Standalone</span>
-                            <?php endif; ?>
-                        </div>
                         <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
                         <?php if (has_post_thumbnail()) : ?>
                             <div class="artwork-thumb"><?php the_post_thumbnail('medium'); ?></div>
@@ -72,6 +63,8 @@ $album_id = get_the_ID();
         <?php wp_reset_postdata(); ?>
     </section>
 </main>
+
+<?php get_template_part('template-parts/comments-box', null, ['initially_open' => true]); ?>
 
 <?php
 get_footer();

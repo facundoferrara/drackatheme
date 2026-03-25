@@ -24,6 +24,32 @@ function dracka_setup()
 add_action('after_setup_theme', 'dracka_setup');
 
 /**
+ * Force comments open for all comic-library post types.
+ *
+ * Posts created before 'comments' was added to their CPT supports have
+ * comment_status='closed' in the DB. This filter overrides that so every
+ * issue, series, artwork, and album always accepts comments.
+ */
+add_filter('comments_open', function (bool $open, int $post_id): bool {
+    $comic_types = ['series', 'issue', 'artwork', 'album'];
+    if (in_array(get_post_type($post_id), $comic_types, true)) {
+        return true;
+    }
+    return $open;
+}, 10, 2);
+
+/**
+ * Default new posts in comic-library types to have comments open.
+ */
+add_filter('default_comment_status', function (string $status, string $post_type): string {
+    $comic_types = ['series', 'issue', 'artwork', 'album'];
+    if (in_array($post_type, $comic_types, true)) {
+        return 'open';
+    }
+    return $status;
+}, 10, 2);
+
+/**
  * Registers widget areas used by the theme.
  *
  * Footer widgets are block-editor compatible and allow managing
@@ -77,6 +103,10 @@ function dracka_enqueue_assets()
         $script_version,
         true
     );
+
+    if (is_singular() && comments_open()) {
+        wp_enqueue_script('comment-reply');
+    }
 }
 add_action('wp_enqueue_scripts', 'dracka_enqueue_assets');
 
@@ -965,7 +995,7 @@ function dracka_register_content_types()
         'rewrite'      => ['slug' => 'series'],
         'menu_icon'    => 'dashicons-book-alt',
         'show_in_rest' => true,
-        'supports'     => ['title', 'thumbnail'],
+        'supports'     => ['title', 'thumbnail', 'comments'],
     ]);
 
     register_post_type('issue', [
@@ -981,7 +1011,7 @@ function dracka_register_content_types()
         'rewrite'      => ['slug' => 'issue'],
         'menu_icon'    => 'dashicons-book',
         'show_in_rest' => true,
-        'supports'     => ['title', 'editor', 'excerpt', 'thumbnail', 'page-attributes'],
+        'supports'     => ['title', 'editor', 'excerpt', 'thumbnail', 'page-attributes', 'comments'],
     ]);
 
     register_post_type('album', [
@@ -997,7 +1027,7 @@ function dracka_register_content_types()
         'rewrite'      => ['slug' => 'album'],
         'menu_icon'    => 'dashicons-format-gallery',
         'show_in_rest' => true,
-        'supports'     => ['title', 'editor', 'excerpt', 'thumbnail'],
+        'supports'     => ['title', 'editor', 'excerpt', 'thumbnail', 'comments'],
     ]);
 
     register_post_type('artwork', [
@@ -1013,7 +1043,7 @@ function dracka_register_content_types()
         'rewrite'      => ['slug' => 'artwork'],
         'menu_icon'    => 'dashicons-format-image',
         'show_in_rest' => true,
-        'supports'     => ['title', 'editor', 'excerpt', 'thumbnail', 'page-attributes'],
+        'supports'     => ['title', 'editor', 'excerpt', 'thumbnail', 'page-attributes', 'comments'],
     ]);
 
     register_post_type('logo_animation', [

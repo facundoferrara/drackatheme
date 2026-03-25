@@ -42,12 +42,6 @@ if ($active_tab === 'issues') {
                 }
                 ?>
                 <article <?php post_class('issue-card'); ?>>
-                    <div class="card-badges">
-                        <span class="content-badge"><?php echo esc_html($type_badge); ?></span>
-                        <?php if ($is_standalone) : ?>
-                            <span class="content-badge content-badge--muted">Standalone</span>
-                        <?php endif; ?>
-                    </div>
                     <h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
                     <?php if (has_post_thumbnail()) : ?>
                         <div class="library-thumb"><?php the_post_thumbnail('medium'); ?></div>

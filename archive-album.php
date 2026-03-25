@@ -42,6 +42,51 @@ $card_class = $active_tab === 'albums' ? 'album-card' : 'artwork-card';
     </div>
 
     <?php if (have_posts()) : ?>
+        <?php
+        $album_elements_by_id = [];
+
+        if ($active_tab === 'albums') {
+            global $wp_query, $wpdb;
+
+            $album_ids = wp_list_pluck($wp_query->posts, 'ID');
+            $album_ids = array_map('intval', $album_ids);
+            $album_ids = array_values(array_filter($album_ids));
+
+            if (!empty($album_ids)) {
+                $album_elements_by_id = array_fill_keys($album_ids, 0);
+
+                $placeholders = implode(', ', array_fill(0, count($album_ids), '%d'));
+                $query_sql = "
+                    SELECT CAST(pm.meta_value AS UNSIGNED) AS album_id, COUNT(p.ID) AS artwork_count
+                    FROM {$wpdb->postmeta} pm
+                    INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+                    WHERE pm.meta_key = %s
+                      AND p.post_type = %s
+                      AND p.post_status = %s
+                      AND CAST(pm.meta_value AS UNSIGNED) IN ($placeholders)
+                    GROUP BY CAST(pm.meta_value AS UNSIGNED)
+                ";
+
+                $query_args = array_merge(['dracka_album_id', 'artwork', 'publish'], $album_ids);
+                $prepared_query = $wpdb->prepare($query_sql, $query_args);
+
+                if (is_string($prepared_query)) {
+                    $album_count_rows = $wpdb->get_results($prepared_query, ARRAY_A);
+
+                    if (is_array($album_count_rows)) {
+                        foreach ($album_count_rows as $album_count_row) {
+                            $album_id = isset($album_count_row['album_id']) ? (int) $album_count_row['album_id'] : 0;
+                            $artwork_count = isset($album_count_row['artwork_count']) ? (int) $album_count_row['artwork_count'] : 0;
+
+                            if ($album_id > 0) {
+                                $album_elements_by_id[$album_id] = $artwork_count;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        ?>
         <div class="<?php echo esc_attr($archive_class); ?>">
             <?php while (have_posts()) : the_post(); ?>
                 <?php
@@ -54,34 +99,10 @@ $card_class = $active_tab === 'albums' ? 'album-card' : 'artwork-card';
                     $album_id = (int) get_post_meta(get_the_ID(), 'dracka_album_id', true);
                     $is_standalone = $album_id <= 0;
                 } elseif ($post_type === 'album') {
-                    $album_artwork_query = new WP_Query([
-                        'post_type'      => 'artwork',
-                        'post_status'    => 'publish',
-                        'posts_per_page' => 1,
-                        'fields'         => 'ids',
-                        'no_found_rows'  => false,
-                        'meta_query'     => [
-                            [
-                                'key'     => 'dracka_album_id',
-                                'value'   => get_the_ID(),
-                                'compare' => '=',
-                                'type'    => 'NUMERIC',
-                            ],
-                        ],
-                    ]);
-                    $album_elements_count = (int) $album_artwork_query->found_posts;
-                    wp_reset_postdata();
+                    $album_elements_count = isset($album_elements_by_id[get_the_ID()]) ? (int) $album_elements_by_id[get_the_ID()] : 0;
                 }
                 ?>
                 <article <?php post_class($card_class); ?>>
-                    <?php if ($active_tab !== 'albums') : ?>
-                        <div class="card-badges">
-                            <span class="content-badge"><?php echo esc_html($type_badge); ?></span>
-                            <?php if ($is_standalone) : ?>
-                                <span class="content-badge content-badge--muted">Standalone</span>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
                     <?php if ($post_type === 'album') : ?>
                         <?php if (has_post_thumbnail()) : ?>
                             <a class="album-thumb" href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr(get_the_title()); ?>"><?php the_post_thumbnail('medium'); ?></a>
@@ -90,7 +111,7 @@ $card_class = $active_tab === 'albums' ? 'album-card' : 'artwork-card';
                         <?php
                         $album_elements_label = sprintf(
                             /* translators: %s: artwork count */
-                            _n('Includes (%s element)', '%s elements', $album_elements_count, 'dracka'),
+                            _n('Includes (%s element)', 'Includes (%s elements)', $album_elements_count, 'dracka'),
                             number_format_i18n($album_elements_count)
                         );
                         ?>

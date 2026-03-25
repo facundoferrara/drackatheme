@@ -154,5 +154,7 @@ $issues = new WP_Query([
     </section>
 </main>
 
+<?php get_template_part('template-parts/comments-box', null, ['initially_open' => false]); ?>
+
 <?php
 get_footer();

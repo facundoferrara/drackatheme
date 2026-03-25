@@ -533,3 +533,5 @@ collapsibleBlocks.forEach((blockElement) => {
   setupCollapsibleBlock(blockElement);
   setupLatestContentLoader(blockElement);
 });
+
+document.querySelectorAll('[data-comments-collapsible]').forEach(setupCollapsibleBlock);
