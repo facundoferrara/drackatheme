@@ -308,6 +308,86 @@ function setupAnimatedLogo() {
 }
 
 /**
+ * Collapses the header on downward scroll and reveals it on upward scroll
+ * for mobile and tablet viewports.
+ */
+function setupResponsiveHeaderCollapse() {
+  const headerElement = document.querySelector('.site-header');
+  const bodyElement = document.body;
+
+  if (!headerElement || !bodyElement) {
+    return;
+  }
+
+  const mobileTabletQuery = window.matchMedia('(max-width: 1023px)');
+  const isHomePage = bodyElement.classList.contains('home') || bodyElement.classList.contains('front-page');
+  let lastScrollY = window.scrollY;
+  let isCollapsed = false;
+
+  const setCollapsed = (shouldCollapse) => {
+    if (isCollapsed === shouldCollapse) {
+      return;
+    }
+
+    isCollapsed = shouldCollapse;
+    headerElement.classList.toggle('is-collapsed-mobile', shouldCollapse);
+  };
+
+  const updateHeaderState = () => {
+    if (!mobileTabletQuery.matches) {
+      setCollapsed(false);
+      lastScrollY = window.scrollY;
+      return;
+    }
+
+    if (isHomePage) {
+      setCollapsed(false);
+      lastScrollY = window.scrollY;
+      return;
+    }
+
+    if (bodyElement.classList.contains('no-scroll')) {
+      setCollapsed(false);
+      return;
+    }
+
+    const currentScrollY = window.scrollY;
+    const scrollDelta = currentScrollY - lastScrollY;
+    const headerHeight = headerElement.offsetHeight || 64;
+    const collapseThreshold = headerHeight + 12;
+
+    if (currentScrollY <= 0 || currentScrollY <= collapseThreshold) {
+      setCollapsed(false);
+      lastScrollY = currentScrollY;
+      return;
+    }
+
+    if (Math.abs(scrollDelta) < 6) {
+      return;
+    }
+
+    if (scrollDelta > 0) {
+      setCollapsed(true);
+    } else {
+      setCollapsed(false);
+    }
+
+    lastScrollY = currentScrollY;
+  };
+
+  window.addEventListener('scroll', updateHeaderState, { passive: true });
+  window.addEventListener('resize', updateHeaderState);
+
+  if (typeof mobileTabletQuery.addEventListener === 'function') {
+    mobileTabletQuery.addEventListener('change', updateHeaderState);
+  } else if (typeof mobileTabletQuery.addListener === 'function') {
+    mobileTabletQuery.addListener(updateHeaderState);
+  }
+
+  updateHeaderState();
+}
+
+/**
  * Wires a collapsible content block with animated expand/collapse transitions.
  *
  * This keeps max-height inline styles in sync with CSS transitions and updates
@@ -523,6 +603,7 @@ const collapsibleBlocks = document.querySelectorAll('[data-collapsible]');
 
 setupMobilePanels();
 setupAnimatedLogo();
+setupResponsiveHeaderCollapse();
 
 collapsibleBlocks.forEach((blockElement) => {
   if (!blockHasRenderableCards(blockElement)) {

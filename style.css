@@ -961,6 +961,10 @@ main > h1 {
     animation: none;
   }
 
+  .site-header {
+    transition: none;
+  }
+
   .dracka-news-ticker__viewport {
     overflow-x: auto;
     overflow-y: hidden;
@@ -983,6 +987,17 @@ main > h1 {
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+@media (max-width: 1023px) {
+  .site-header {
+    transition: transform 0.24s ease;
+    will-change: transform;
+  }
+
+  .site-header.is-collapsed-mobile {
+    transform: translateY(calc(-1 * (var(--header-height) + 1px)));
+  }
 }
 
 .header-inner {
