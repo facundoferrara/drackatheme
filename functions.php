@@ -278,6 +278,10 @@ function dracka_get_admin_relation_posts_limit()
  */
 function dracka_get_latest_content_query_args($offset, $limit, $post_type, $sort_mode = 'newest')
 {
+    if ($post_type === 'library') {
+        return dracka_get_library_preview_query_args($offset, $limit, $sort_mode);
+    }
+
     $sort_mode = dracka_normalize_latest_sort_mode($sort_mode);
 
     $query_args = [
@@ -314,7 +318,12 @@ function dracka_get_effective_cap($post_type, $max_items_cap)
     $total = wp_cache_get($cache_key, 'dracka_theme');
 
     if ($total === false) {
-        $total = (int) wp_count_posts($post_type)->publish;
+        if ($post_type === 'library') {
+            $total = dracka_get_library_preview_total_count();
+        } else {
+            $total = (int) wp_count_posts($post_type)->publish;
+        }
+
         wp_cache_set($cache_key, $total, 'dracka_theme', MINUTE_IN_SECONDS * 10);
     } else {
         $total = (int) $total;
@@ -335,12 +344,16 @@ function dracka_invalidate_effective_cap_cache($post_id)
 {
     $post_type = get_post_type((int) $post_id);
 
-    if (!is_string($post_type) || !in_array($post_type, ['issue', 'artwork', 'post'], true)) {
+    if (!is_string($post_type) || !in_array($post_type, ['series', 'issue', 'artwork', 'post'], true)) {
         return;
     }
 
     $cache_key = dracka_get_effective_cap_cache_key($post_type);
     wp_cache_delete($cache_key, 'dracka_theme');
+
+    if (in_array($post_type, ['series', 'issue'], true)) {
+        wp_cache_delete(dracka_get_effective_cap_cache_key('library'), 'dracka_theme');
+    }
 }
 add_action('save_post', 'dracka_invalidate_effective_cap_cache');
 add_action('deleted_post', 'dracka_invalidate_effective_cap_cache');
@@ -356,7 +369,91 @@ add_action('trashed_post', 'dracka_invalidate_effective_cap_cache');
  */
 function dracka_get_latest_issue_query_args($offset, $limit, $sort_mode = 'newest')
 {
-    return dracka_get_latest_content_query_args($offset, $limit, 'issue', $sort_mode);
+    return dracka_get_latest_content_query_args($offset, $limit, 'library', $sort_mode);
+}
+
+/**
+ * Builds query args for the homepage library preview.
+ *
+ * Includes standalone issues and series posts only.
+ *
+ * @param int $offset Number of posts to skip.
+ * @param int $limit Number of posts to return.
+ * @param string $sort_mode Sorting mode.
+ * @return array<string, mixed>
+ */
+function dracka_get_library_preview_query_args($offset, $limit, $sort_mode = 'newest')
+{
+    $sort_mode = dracka_normalize_latest_sort_mode($sort_mode);
+
+    $series_statuses = dracka_get_series_public_statuses();
+    if (!is_array($series_statuses)) {
+        $series_statuses = [];
+    }
+
+    $query_args = [
+        'post_type'      => ['issue', 'series'],
+        'post_status'    => array_values(array_unique(array_merge(['publish'], $series_statuses))),
+        'posts_per_page' => $limit,
+        'offset'         => $offset,
+        'no_found_rows'  => true,
+        // Keep issues limited to standalones while allowing series posts through.
+        'meta_query'     => [
+            'relation' => 'OR',
+            [
+                'key'     => 'dracka_series_id',
+                'compare' => 'NOT EXISTS',
+            ],
+            [
+                'key'     => 'dracka_series_id',
+                'value'   => '',
+                'compare' => '=',
+            ],
+            [
+                'key'     => 'dracka_series_id',
+                'value'   => '0',
+                'compare' => '=',
+            ],
+        ],
+    ];
+
+    if ($sort_mode === 'manual') {
+        $query_args['orderby'] = [
+            'menu_order' => 'ASC',
+            'date'       => 'DESC',
+        ];
+    } else {
+        $query_args['orderby'] = 'date';
+        $query_args['order'] = 'DESC';
+    }
+
+    return $query_args;
+}
+
+/**
+ * Counts total items eligible for the homepage library preview.
+ *
+ * @return int
+ */
+function dracka_get_library_preview_total_count()
+{
+    $cache_key = dracka_get_effective_cap_cache_key('library');
+    $total = wp_cache_get($cache_key, 'dracka_theme');
+
+    if ($total !== false) {
+        return (int) $total;
+    }
+
+    $count_query_args = dracka_get_library_preview_query_args(0, 1, 'newest');
+    $count_query_args['no_found_rows'] = false;
+
+    $count_query = new WP_Query($count_query_args);
+    $total = (int) $count_query->found_posts;
+    wp_reset_postdata();
+
+    wp_cache_set($cache_key, $total, 'dracka_theme', MINUTE_IN_SECONDS * 10);
+
+    return $total;
 }
 
 /**
@@ -372,7 +469,19 @@ function dracka_render_content_card_markup($post_id, $content_type)
 {
     $post_id = (int) $post_id;
 
-    if (!$post_id || get_post_status($post_id) !== 'publish') {
+    if (!$post_id) {
+        return '';
+    }
+
+    $post_type = get_post_type($post_id);
+    $post_status = get_post_status($post_id);
+
+    if ($post_type === 'series') {
+        $allowed_series_statuses = dracka_get_series_public_statuses();
+        if (!is_array($allowed_series_statuses) || !in_array($post_status, $allowed_series_statuses, true)) {
+            return '';
+        }
+    } elseif ($post_status !== 'publish') {
         return '';
     }
 
@@ -634,7 +743,7 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
  */
 function dracka_render_latest_issues_block($attributes)
 {
-    return dracka_render_latest_content_block('issue', $attributes, [
+    return dracka_render_latest_content_block('library', $attributes, [
         'title'    => 'Library',
         'go_label' => 'Go to library',
         'go_url'   => '/library/issues/',
@@ -795,8 +904,8 @@ function dracka_register_rest_routes()
     ];
 
     $endpoints = [
-        'issues'  => 'issue',
-        'artwork' => 'artwork',
+        'issues'     => 'library',
+        'artwork'    => 'artwork',
         'newsletter' => 'post',
     ];
 
@@ -822,7 +931,7 @@ add_action('rest_api_init', 'dracka_register_rest_routes');
  */
 function dracka_rest_get_latest_content($request, $content_type)
 {
-    if (!in_array($content_type, ['issue', 'artwork', 'post'], true)) {
+    if (!in_array($content_type, ['library', 'issue', 'artwork', 'post'], true)) {
         return new WP_Error('dracka_invalid_content_type', 'Unsupported content type.', ['status' => 400]);
     }
 
@@ -1242,6 +1351,7 @@ const DRACKA_SERIES_SPLASH_META_KEY = 'dracka_series_splash_attachment_id';
 const DRACKA_SERIES_AUTHOR_META_KEY = 'dracka_series_author';
 const DRACKA_SERIES_DESCRIPTION_META_KEY = 'dracka_series_description';
 const DRACKA_SERIES_YEAR_META_KEY = 'dracka_publication_year';
+const DRACKA_ISSUE_NUMBER_META_KEY = 'dracka_series_order';
 
 /**
  * Enqueues media scripts for issue and series editor screens.
@@ -1623,19 +1733,144 @@ function dracka_render_series_splash_metabox($post)
 /**
  * Renders the issue metabox that links an issue to a series.
  *
- * It prints a nonce, fetches current linkage/order metadata, queries
+ * It prints a nonce, fetches current linkage/number metadata, queries
  * editable series statuses sorted by title, and renders a select input plus
- * numeric order field for manual sequence control.
+ * issue number field for chapter sequencing.
  *
  * @param WP_Post $post Current issue post being edited.
  * @return void
  */
+function dracka_get_series_issue_numbers($series_id, $exclude_post_id = 0): array
+{
+    $series_id = (int) $series_id;
+    $exclude_post_id = (int) $exclude_post_id;
+
+    if ($series_id <= 0) {
+        return [];
+    }
+
+    $issue_ids = get_posts([
+        'post_type'      => 'issue',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+        'meta_query'     => [
+            [
+                'key'     => 'dracka_series_id',
+                'value'   => $series_id,
+                'compare' => '=',
+                'type'    => 'NUMERIC',
+            ],
+        ],
+    ]);
+    $issue_ids = is_array($issue_ids) ? $issue_ids : [];
+
+    $issue_numbers = [];
+
+    foreach ($issue_ids as $issue_id) {
+        $issue_id = (int) $issue_id;
+
+        if ($exclude_post_id > 0 && $issue_id === $exclude_post_id) {
+            continue;
+        }
+
+        $number = (int) get_post_meta($issue_id, DRACKA_ISSUE_NUMBER_META_KEY, true);
+        if ($number > 0) {
+            $issue_numbers[$number] = true;
+        }
+    }
+
+    $numbers = array_keys($issue_numbers);
+    sort($numbers, SORT_NUMERIC);
+
+    return $numbers;
+}
+
+/**
+ * Returns the smallest unused positive issue number for a series.
+ *
+ * @param int $series_id Series post ID.
+ * @param int $exclude_post_id Optional issue post ID to skip.
+ * @return int
+ */
+function dracka_get_next_available_series_issue_number($series_id, $exclude_post_id = 0): int
+{
+    $numbers = dracka_get_series_issue_numbers($series_id, $exclude_post_id);
+    if (!is_array($numbers)) {
+        return 1;
+    }
+
+    $candidate = 1;
+
+    foreach ($numbers as $number) {
+        if ((int) $number === $candidate) {
+            $candidate++;
+            continue;
+        }
+
+        if ((int) $number > $candidate) {
+            break;
+        }
+    }
+
+    return $candidate;
+}
+
+/**
+ * Checks whether an issue number is already used within a series.
+ *
+ * @param int $series_id Series post ID.
+ * @param int $issue_number Proposed issue number.
+ * @param int $exclude_post_id Optional issue post ID to skip.
+ * @return bool
+ */
+function dracka_is_series_issue_number_taken($series_id, $issue_number, $exclude_post_id = 0): bool
+{
+    $issue_number = (int) $issue_number;
+
+    if ($issue_number <= 0) {
+        return false;
+    }
+
+    $numbers = dracka_get_series_issue_numbers($series_id, $exclude_post_id);
+    if (!is_array($numbers)) {
+        return false;
+    }
+
+    return in_array($issue_number, $numbers, true);
+}
+
+/**
+ * Stores a one-time admin notice for issue number validation failures.
+ *
+ * @param int    $post_id Issue post ID.
+ * @param string $message Notice message.
+ * @return void
+ */
+function dracka_set_issue_number_validation_notice($post_id, $message)
+{
+    $user_id = get_current_user_id();
+    if ($user_id <= 0) {
+        return;
+    }
+
+    set_transient(
+        'dracka_issue_number_notice_' . $user_id,
+        [
+            'post_id' => (int) $post_id,
+            'message' => (string) $message,
+        ],
+        120
+    );
+}
+
 function dracka_render_series_metabox($post)
 {
     wp_nonce_field('dracka_save_series_link', 'dracka_series_nonce');
 
     $current_series = (int) get_post_meta($post->ID, 'dracka_series_id', true);
-    $current_order = get_post_meta($post->ID, 'dracka_series_order', true);
+    $current_order = get_post_meta($post->ID, DRACKA_ISSUE_NUMBER_META_KEY, true);
     $relation_posts_limit = dracka_get_admin_relation_posts_limit();
     $series_posts = get_posts([
         'post_type'      => 'series',
@@ -1662,6 +1897,13 @@ function dracka_render_series_metabox($post)
         }
     }
 
+    $default_issue_number = '';
+    if ((string) $current_order !== '') {
+        $default_issue_number = (string) (int) $current_order;
+    } elseif ($current_series > 0) {
+        $default_issue_number = (string) dracka_get_next_available_series_issue_number($current_series, (int) $post->ID);
+    }
+
     echo '<select name="dracka_series_id" style="width:100%">';
     echo '<option value="">No series (standalone)</option>';
     foreach ($series_posts as $series) {
@@ -1674,14 +1916,39 @@ function dracka_render_series_metabox($post)
         }
 
         $selected = $current_series === (int) $series->ID ? ' selected' : '';
-        echo '<option value="' . esc_attr($series->ID) . '"' . $selected . '>' . esc_html($series_option_label) . '</option>';
+        $next_issue_number = dracka_get_next_available_series_issue_number((int) $series->ID, (int) $post->ID);
+        echo '<option value="' . esc_attr($series->ID) . '" data-next-issue="' . esc_attr($next_issue_number) . '"' . $selected . '>' . esc_html($series_option_label) . '</option>';
     }
     echo '</select>';
 
     echo '<p style="margin-top:10px">';
-    echo '<label for="dracka_series_order" style="display:block;margin-bottom:4px">Series order</label>';
-    echo '<input type="number" id="dracka_series_order" name="dracka_series_order" value="' . esc_attr($current_order) . '" min="0" step="1" style="width:100%">';
+    echo '<label for="dracka_series_order" style="display:block;margin-bottom:4px">Issue number</label>';
+    echo '<input type="number" id="dracka_series_order" name="dracka_series_order" value="' . esc_attr($default_issue_number) . '" min="1" step="1" style="width:100%">';
+    echo '<span class="description" id="dracka_issue_number_hint" style="display:block;margin-top:4px">Issue number is required for series-linked issues.</span>';
     echo '</p>';
+
+    echo '<script type="text/javascript">';
+    echo 'document.addEventListener("DOMContentLoaded", function() {';
+    echo 'var seriesField = document.querySelector("select[name=\"dracka_series_id\"]");';
+    echo 'var numberField = document.getElementById("dracka_series_order");';
+    echo 'var hint = document.getElementById("dracka_issue_number_hint");';
+    echo 'if (!seriesField || !numberField || !hint) { return; }';
+    echo 'var updateHint = function() {';
+    echo 'var selectedOption = seriesField.options[seriesField.selectedIndex];';
+    echo 'var nextIssue = selectedOption ? selectedOption.getAttribute("data-next-issue") : "";';
+    echo 'if (seriesField.value === "") {';
+    echo 'hint.textContent = "Optional for standalone issues.";';
+    echo 'return;';
+    echo '}';
+    echo 'if ((numberField.value || "").trim() === "" && nextIssue) {';
+    echo 'numberField.value = nextIssue;';
+    echo '}';
+    echo 'hint.textContent = nextIssue ? ("Suggested next issue number: " + nextIssue) : "Issue number is required for series-linked issues.";';
+    echo '};';
+    echo 'seriesField.addEventListener("change", updateHint);';
+    echo 'updateHint();';
+    echo '});';
+    echo '</script>';
 }
 
 /**
@@ -2002,7 +2269,7 @@ function dracka_save_relationship_meta($post_id)
     if ($post_type === 'issue') {
         if (!current_user_can('edit_post', $post_id)) return;
 
-        // Save series link and order (if nonce is valid)
+        // Save series link and issue number (if nonce is valid)
         if (isset($_POST['dracka_series_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_series_nonce'])), 'dracka_save_series_link')) {
             $series_id = isset($_POST['dracka_series_id']) ? (int) $_POST['dracka_series_id'] : 0;
             if ($series_id > 0) {
@@ -2013,9 +2280,9 @@ function dracka_save_relationship_meta($post_id)
 
             $order_raw = isset($_POST['dracka_series_order']) ? trim(wp_unslash($_POST['dracka_series_order'])) : '';
             if ($order_raw !== '') {
-                update_post_meta($post_id, 'dracka_series_order', (int) $order_raw);
+                update_post_meta($post_id, DRACKA_ISSUE_NUMBER_META_KEY, max(1, (int) $order_raw));
             } else {
-                delete_post_meta($post_id, 'dracka_series_order');
+                delete_post_meta($post_id, DRACKA_ISSUE_NUMBER_META_KEY);
             }
         }
 
@@ -2168,6 +2435,123 @@ function dracka_save_relationship_meta($post_id)
     }
 }
 add_action('save_post', 'dracka_save_relationship_meta');
+
+/**
+ * Enforces mandatory, unique issue numbers for series-linked issues.
+ *
+ * @param array<string, mixed> $data Prepared post data.
+ * @param array<string, mixed> $postarr Raw submitted post data.
+ * @return array<string, mixed>
+ */
+function dracka_enforce_series_issue_number_rules($data, $postarr)
+{
+    if (($data['post_type'] ?? '') !== 'issue') {
+        return $data;
+    }
+
+    if (!isset($_POST['dracka_series_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_series_nonce'])), 'dracka_save_series_link')) {
+        return $data;
+    }
+
+    // Enforce on publish-like states so drafts can be prepared incrementally.
+    $blocking_statuses = ['publish', 'future', 'private', 'pending'];
+    if (!in_array($data['post_status'] ?? '', $blocking_statuses, true)) {
+        return $data;
+    }
+
+    $post_id = isset($postarr['ID']) ? (int) $postarr['ID'] : 0;
+    $series_id = isset($_POST['dracka_series_id']) ? (int) $_POST['dracka_series_id'] : 0;
+
+    // Standalone issues do not require a series issue number.
+    if ($series_id <= 0) {
+        return $data;
+    }
+
+    $issue_number_raw = isset($_POST['dracka_series_order']) ? trim(wp_unslash($_POST['dracka_series_order'])) : '';
+    $next_available_number = dracka_get_next_available_series_issue_number($series_id, $post_id);
+
+    if ($issue_number_raw === '' || !preg_match('/^\d+$/', $issue_number_raw) || (int) $issue_number_raw <= 0) {
+        $data['post_status'] = 'draft';
+        dracka_set_issue_number_validation_notice(
+            $post_id,
+            sprintf(
+                'Issue number is required for series-linked issues. Next available number: %d.',
+                $next_available_number
+            )
+        );
+
+        return $data;
+    }
+
+    $issue_number = (int) $issue_number_raw;
+    if (dracka_is_series_issue_number_taken($series_id, $issue_number, $post_id)) {
+        $data['post_status'] = 'draft';
+        dracka_set_issue_number_validation_notice(
+            $post_id,
+            sprintf(
+                'Issue number %1$d is already in use for this series. Next available number: %2$d.',
+                $issue_number,
+                $next_available_number
+            )
+        );
+    }
+
+    return $data;
+}
+add_filter('wp_insert_post_data', 'dracka_enforce_series_issue_number_rules', 20, 2);
+
+/**
+ * Renders one-time admin notices for issue number validation failures.
+ *
+ * @return void
+ */
+function dracka_render_issue_number_validation_notice()
+{
+    $user_id = get_current_user_id();
+    if ($user_id <= 0) {
+        return;
+    }
+
+    $transient_key = 'dracka_issue_number_notice_' . $user_id;
+    $notice = get_transient($transient_key);
+    if (!is_array($notice) || empty($notice['message'])) {
+        return;
+    }
+
+    delete_transient($transient_key);
+
+    echo '<div class="notice notice-error is-dismissible"><p>' . esc_html((string) $notice['message']) . '</p></div>';
+}
+add_action('admin_notices', 'dracka_render_issue_number_validation_notice');
+
+/**
+ * Applies stable issue-number sorting for series issue listings.
+ *
+ * Numbered issues are sorted first, then unnumbered legacy issues are pushed
+ * to the end and ordered by publication date.
+ *
+ * @param array<string, string> $clauses SQL clauses for the query.
+ * @param WP_Query              $query Query being prepared.
+ * @return array<string, string>
+ */
+function dracka_sort_series_issues_by_issue_number($clauses, $query)
+{
+    if (!($query instanceof WP_Query) || !$query->get('dracka_sort_by_issue_number')) {
+        return $clauses;
+    }
+
+    global $wpdb;
+
+    $direction = strtoupper((string) $query->get('dracka_issue_number_direction'));
+    $direction = $direction === 'DESC' ? 'DESC' : 'ASC';
+
+    $meta_key = DRACKA_ISSUE_NUMBER_META_KEY;
+    $clauses['join'] .= " LEFT JOIN {$wpdb->postmeta} AS dracka_issue_number_pm ON ({$wpdb->posts}.ID = dracka_issue_number_pm.post_id AND dracka_issue_number_pm.meta_key = '" . esc_sql($meta_key) . "')";
+    $clauses['orderby'] = "CASE WHEN dracka_issue_number_pm.meta_value IS NULL OR dracka_issue_number_pm.meta_value = '' THEN 1 ELSE 0 END ASC, CAST(dracka_issue_number_pm.meta_value AS UNSIGNED) {$direction}, {$wpdb->posts}.post_date {$direction}";
+
+    return $clauses;
+}
+add_filter('posts_clauses', 'dracka_sort_series_issues_by_issue_number', 10, 2);
 
 /**
  * Validates that an attachment is an image.

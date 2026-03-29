@@ -20,8 +20,8 @@ $issues = new WP_Query([
             'type'    => 'NUMERIC',
         ],
     ],
-    'orderby'        => 'date',
-    'order'          => $issues_order,
+    'dracka_sort_by_issue_number' => true,
+    'dracka_issue_number_direction' => $issues_order,
 ]);
 ?>
 
@@ -100,7 +100,7 @@ $issues = new WP_Query([
             <h2>Released Issues</h2>
             <?php
             $toggle_sort = $issues_sort === 'new' ? 'old' : 'new';
-            $toggle_label = $issues_sort === 'new' ? 'Sort: Old to New' : 'Sort: New to Old';
+            $toggle_label = $issues_sort === 'new' ? 'Sort: Issue Order (Ascending)' : 'Sort: Issue Order (Descending)';
             $sort_url = add_query_arg([
                 'issues_sort' => $toggle_sort,
                 'issues_page' => 1,
