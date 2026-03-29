@@ -895,6 +895,19 @@ function dracka_get_palette_defaults()
 }
 
 /**
+ * Renders an inline SVG eye icon for view counts.
+ *
+ * The icon uses currentColor so it inherits the parent's text color,
+ * allowing it to be styled dynamically via CSS variables (--color-muted).
+ *
+ * @return string SVG markup as a string.
+ */
+function dracka_render_eye_icon()
+{
+    return '<svg class="dracka-eye-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 4C6 4 1.27 8.47 1 14c.27 5.53 5 10 11 10s10.73-4.47 11-10c-.27-5.53-5-10-11-10zm0 16c-3.86 0-7.41-2.53-8-6c.59-3.47 4.14-6 8-6s7.41 2.53 8 6c-.59 3.47-4.14 6-8 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z" fill="currentColor"/></svg>';
+}
+
+/**
  * Registers Customizer settings and controls for the theme palette.
  *
  * It creates a dedicated section, loops over known palette keys,

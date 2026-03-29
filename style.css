@@ -648,6 +648,17 @@ main > h1 {
 .series-issue-row__views {
   color: var(--color-muted);
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dracka-eye-icon {
+  margin-bottom: 5px;
+  width: 1.1em;
+  height: 1.1em;
+  flex-shrink: 0;
+  color: var(--color-muted);
 }
 
 .series-issue-row__date {

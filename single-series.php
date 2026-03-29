@@ -125,7 +125,7 @@ $issues = new WP_Query([
                         <div class="series-issue-row__content">
                             <div class="series-issue-row__title-wrap">
                                 <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-                                <div class="series-issue-row__views"><?php echo do_shortcode('[views]'); ?></div>
+                                <div class="series-issue-row__views"><?php echo dracka_render_eye_icon(); ?><?php echo do_shortcode('[views]'); ?></div>
                             </div>
                             <p class="series-issue-row__date"><?php echo esc_html(get_the_date()); ?></p>
                         </div>
