@@ -125,6 +125,45 @@ main {
   color: var(--color-muted);
 }
 
+/* ── 404 page ───────────────────────────────────────────────── */
+.error-404 {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.error-404__image-link {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  max-height: 800px;
+  overflow: hidden;
+}
+
+.error-404__image-link img {
+  object-fit: contain;
+}
+
+.error-404__image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.error-404__fallback {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.error-404__title {
+  margin-bottom: 1rem;
+}
+
+.error-404__home-link {
+  text-decoration: underline;
+}
+/* ─────────────────────────────────────────────────────────── */
+
 .site-footer__social {
   margin-top: 1rem;
 }

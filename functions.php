@@ -2843,6 +2843,7 @@ function dracka_social_icons($item_output, $item, $depth, $args)
 add_filter('walker_nav_menu_start_el', 'dracka_social_icons', 10, 4);
 
 require get_template_directory() . '/inc/svg-icons.php';
+require get_template_directory() . '/inc/theme-settings.php';
 
 /**
  * Issue access module for flipbook and Patreon lock modes.
