@@ -24,18 +24,13 @@ $patreon_image_id = (int) get_post_meta($issue_id, DRACKA_ISSUE_PATREON_IMAGE_ME
                     if ($access_mode === 'patreon') {
                         if ($patreon_image_id > 0) {
                             echo '<div class="issue-patreon-image">';
-                            echo wp_get_attachment_image($patreon_image_id, 'large');
-                            echo '</div>';
-                        }
-
-                        if ($patreon_url !== '') {
-                            echo '<p class="issue-patreon-cta">';
-                            echo '<a class="button" href="' . esc_url($patreon_url) . '" target="_blank" rel="noopener noreferrer">Join Patreon to unlock this issue</a>';
-                            echo '</p>';
-                        } else {
-                            echo '<div class="issue-error">';
-                            echo '<p><strong>Patreon Link Not Configured</strong></p>';
-                            echo '<p>This issue is set to Patreon lock mode, but no Patreon URL was configured.</p>';
+                            if ($patreon_url !== '') {
+                                echo '<a href="' . esc_url($patreon_url) . '" target="_blank" rel="noopener noreferrer">';
+                                echo wp_get_attachment_image($patreon_image_id, 'large');
+                                echo '</a>';
+                            } else {
+                                echo wp_get_attachment_image($patreon_image_id, 'large');
+                            }
                             echo '</div>';
                         }
                     } elseif ($flipbook_id > 0 && shortcode_exists('dflip')) {
