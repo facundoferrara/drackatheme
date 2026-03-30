@@ -51,69 +51,69 @@
         data-panel-target="mobile-menu-panel">☰</button>
     </div>
 
-    <?php
-    $dracka_mobile_panels = [
-      [
-        'id' => 'mobile-menu-panel',
-        'modifier' => 'mobile-overlay--menu',
-        'close_label' => 'Close menu panel',
-      ],
-      [
-        'id' => 'mobile-info-panel',
-        'modifier' => 'mobile-overlay--info',
-        'close_label' => 'Close info panel',
-      ],
-    ];
-    ?>
+  </header>
 
-    <?php foreach ($dracka_mobile_panels as $dracka_mobile_panel) : ?>
-      <div class="mobile-overlay <?php echo esc_attr($dracka_mobile_panel['modifier']); ?>" id="<?php echo esc_attr($dracka_mobile_panel['id']); ?>" data-mobile-panel="<?php echo esc_attr($dracka_mobile_panel['id']); ?>" aria-hidden="true">
+  <?php
+  $dracka_mobile_panels = [
+    [
+      'id' => 'mobile-menu-panel',
+      'modifier' => 'mobile-overlay--menu',
+      'close_label' => 'Close menu panel',
+    ],
+    [
+      'id' => 'mobile-info-panel',
+      'modifier' => 'mobile-overlay--info',
+      'close_label' => 'Close info panel',
+    ],
+  ];
+  ?>
 
-        <div class="mobile-overlay-panel" data-overlay-panel>
+  <?php foreach ($dracka_mobile_panels as $dracka_mobile_panel) : ?>
+    <div class="mobile-overlay <?php echo esc_attr($dracka_mobile_panel['modifier']); ?>" id="<?php echo esc_attr($dracka_mobile_panel['id']); ?>" data-mobile-panel="<?php echo esc_attr($dracka_mobile_panel['id']); ?>" aria-hidden="true">
 
-          <div class="overlay-header">
-            <button class="overlay-close" type="button" aria-label="<?php echo esc_attr($dracka_mobile_panel['close_label']); ?>" data-panel-close="<?php echo esc_attr($dracka_mobile_panel['id']); ?>">×</button>
-          </div>
+      <div class="mobile-overlay-panel" data-overlay-panel>
 
-          <?php if ('mobile-menu-panel' === $dracka_mobile_panel['id']) : ?>
-            <nav class="overlay-nav">
-              <?php
-              wp_nav_menu([
-                'theme_location' => 'primary',
-                'container'      => false,
-                'menu_class'     => 'overlay-menu',
-              ]);
-              ?>
-            </nav>
-
-            <nav class="overlay-social">
-              <?php
-              wp_nav_menu([
-                'theme_location' => 'social',
-                'container'      => false,
-                'menu_class'     => 'social-menu',
-                'link_before'    => '<span class="social-icon">',
-                'link_after'     => '</span>',
-              ]);
-              ?>
-            </nav>
-          <?php else : ?>
-            <section class="overlay-info" aria-label="Information panel">
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-              <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
-            </section>
-          <?php endif; ?>
-
+        <div class="overlay-header">
+          <button class="overlay-close" type="button" aria-label="<?php echo esc_attr($dracka_mobile_panel['close_label']); ?>" data-panel-close="<?php echo esc_attr($dracka_mobile_panel['id']); ?>">×</button>
         </div>
 
-        <button
-          class="overlay-dismiss-zone"
-          type="button"
-          aria-label="<?php echo esc_attr($dracka_mobile_panel['close_label']); ?>"
-          data-panel-close="<?php echo esc_attr($dracka_mobile_panel['id']); ?>"></button>
+        <?php if ('mobile-menu-panel' === $dracka_mobile_panel['id']) : ?>
+          <nav class="overlay-nav">
+            <?php
+            wp_nav_menu([
+              'theme_location' => 'primary',
+              'container'      => false,
+              'menu_class'     => 'overlay-menu',
+            ]);
+            ?>
+          </nav>
+
+          <nav class="overlay-social">
+            <?php
+            wp_nav_menu([
+              'theme_location' => 'social',
+              'container'      => false,
+              'menu_class'     => 'social-menu',
+              'link_before'    => '<span class="social-icon">',
+              'link_after'     => '</span>',
+            ]);
+            ?>
+          </nav>
+        <?php else : ?>
+          <section class="overlay-info" aria-label="Information panel">
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            <p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+          </section>
+        <?php endif; ?>
 
       </div>
-    <?php endforeach; ?>
 
-  </header>
+      <button
+        class="overlay-dismiss-zone"
+        type="button"
+        aria-label="<?php echo esc_attr($dracka_mobile_panel['close_label']); ?>"
+        data-panel-close="<?php echo esc_attr($dracka_mobile_panel['id']); ?>"></button>
+
+    </div>
+  <?php endforeach; ?>

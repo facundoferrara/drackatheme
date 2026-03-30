@@ -7,6 +7,12 @@ $access_mode = dracka_get_issue_access_mode($issue_id);
 $flipbook_id = (int) get_post_meta($issue_id, DRACKA_ISSUE_FLIPBOOK_ID_META_KEY, true);
 $patreon_url = (string) get_post_meta($issue_id, DRACKA_ISSUE_PATREON_URL_META_KEY, true);
 $patreon_image_id = (int) get_post_meta($issue_id, DRACKA_ISSUE_PATREON_IMAGE_META_KEY, true);
+$issue_navigation = dracka_get_issue_series_navigation($issue_id);
+$series_issues = isset($issue_navigation['issues']) && is_array($issue_navigation['issues']) ? $issue_navigation['issues'] : [];
+$previous_issue = isset($issue_navigation['previous']) && is_array($issue_navigation['previous']) ? $issue_navigation['previous'] : null;
+$next_issue = isset($issue_navigation['next']) && is_array($issue_navigation['next']) ? $issue_navigation['next'] : null;
+$last_issue = isset($issue_navigation['last']) && is_array($issue_navigation['last']) ? $issue_navigation['last'] : null;
+$has_episode_navigation = !empty($series_issues);
 ?>
 
 <main class="issue-single">
@@ -48,6 +54,89 @@ $patreon_image_id = (int) get_post_meta($issue_id, DRACKA_ISSUE_PATREON_IMAGE_ME
                     }
                     ?>
                 </div>
+
+                <?php if ($has_episode_navigation) : ?>
+                    <section class="issue-episodes-nav dracka-collapsible" data-comments-collapsible>
+                        <div class="issue-episodes-nav__bar dracka-collapsible__toggle" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle episodes list">
+                            <?php if ($previous_issue) : ?>
+                                <a class="issue-episodes-nav__segment" data-collapsible-ignore-toggle href="<?php echo esc_url((string) $previous_issue['url']); ?>">
+                                    <span class="issue-episodes-nav__arrow issue-episodes-nav__arrow--left" aria-hidden="true"></span>
+                                    <span>Previous</span>
+                                </a>
+                            <?php endif; ?>
+
+                            <span class="issue-episodes-nav__segment issue-episodes-nav__segment--episodes">
+                                <span class="dracka-collapsible__title">Episodes</span>
+                                <span class="dracka-collapsible__arrow" aria-hidden="true"></span>
+                            </span>
+
+                            <?php if ($next_issue) : ?>
+                                <a class="issue-episodes-nav__segment" data-collapsible-ignore-toggle href="<?php echo esc_url((string) $next_issue['url']); ?>">
+                                    <span>Next</span>
+                                    <span class="issue-episodes-nav__arrow issue-episodes-nav__arrow--right" aria-hidden="true"></span>
+                                </a>
+                            <?php endif; ?>
+
+                            <?php if ($last_issue) : ?>
+                                <a class="issue-episodes-nav__segment" data-collapsible-ignore-toggle href="<?php echo esc_url((string) $last_issue['url']); ?>">
+                                    <span>Last</span>
+                                    <span class="issue-episodes-nav__arrow issue-episodes-nav__arrow--right" aria-hidden="true"></span>
+                                    <span class="issue-episodes-nav__arrow issue-episodes-nav__arrow--right" aria-hidden="true"></span>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="dracka-collapsible__content issue-episodes-nav__content" hidden>
+                            <div class="series-issues-list">
+                                <?php foreach ($series_issues as $series_issue) : ?>
+                                    <?php
+                                    $series_issue_id = isset($series_issue['id']) ? (int) $series_issue['id'] : 0;
+                                    if ($series_issue_id <= 0) {
+                                        continue;
+                                    }
+
+                                    $series_issue_title = isset($series_issue['title']) ? (string) $series_issue['title'] : get_the_title($series_issue_id);
+                                    $series_issue_url = isset($series_issue['url']) ? (string) $series_issue['url'] : get_permalink($series_issue_id);
+                                    $series_issue_date = isset($series_issue['date']) ? (string) $series_issue['date'] : get_the_date('', $series_issue_id);
+                                    $is_current_issue = $series_issue_id === $issue_id;
+                                    ?>
+                                    <article class="series-issue-row<?php echo $is_current_issue ? ' is-current' : ''; ?>">
+                                        <div class="series-issue-row__media">
+                                            <?php if (has_post_thumbnail($series_issue_id)) : ?>
+                                                <?php if ($is_current_issue) : ?>
+                                                    <span class="series-issue-row__thumb-link" aria-hidden="true">
+                                                        <?php echo get_the_post_thumbnail($series_issue_id, 'medium'); ?>
+                                                    </span>
+                                                <?php else : ?>
+                                                    <a href="<?php echo esc_url($series_issue_url); ?>" class="series-issue-row__thumb-link" aria-label="<?php echo esc_attr($series_issue_title); ?>">
+                                                        <?php echo get_the_post_thumbnail($series_issue_id, 'medium'); ?>
+                                                    </a>
+                                                <?php endif; ?>
+                                            <?php else : ?>
+                                                <div class="series-issue-row__thumb-placeholder" aria-hidden="true"></div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="series-issue-row__content">
+                                            <div class="series-issue-row__title-wrap">
+                                                <h3>
+                                                    <?php if ($is_current_issue) : ?>
+                                                        <span><?php echo esc_html($series_issue_title); ?></span>
+                                                    <?php else : ?>
+                                                        <a href="<?php echo esc_url($series_issue_url); ?>"><?php echo esc_html($series_issue_title); ?></a>
+                                                    <?php endif; ?>
+                                                </h3>
+                                                <?php if ($is_current_issue) : ?>
+                                                    <span class="issue-episodes-nav__current-pill">Current</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <p class="series-issue-row__date"><?php echo esc_html($series_issue_date); ?></p>
+                                        </div>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </section>
+                <?php endif; ?>
             </article>
         <?php endwhile; ?>
     <?php endif; ?>

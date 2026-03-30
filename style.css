@@ -355,6 +355,97 @@ main > h1 {
   margin-bottom: 1rem;
 }
 
+.issue-episodes-nav {
+  margin-top: 1rem;
+}
+
+.issue-episodes-nav__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-panel);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.issue-episodes-nav__segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-height: 2.85rem;
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.issue-episodes-nav__segment + .issue-episodes-nav__segment {
+  border-left: 1px solid var(--color-panel);
+}
+
+.issue-episodes-nav__segment:hover,
+.issue-episodes-nav__segment:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.issue-episodes-nav__content {
+  margin-top: 0.75rem;
+}
+
+.issue-episodes-nav__segment--episodes {
+  font-weight: 600;
+}
+
+.issue-episodes-nav__bar .dracka-collapsible__arrow {
+  order: 0;
+  margin-left: 0.5rem;
+}
+
+.issue-episodes-nav__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  flex-shrink: 0;
+}
+
+.issue-episodes-nav__arrow--right {
+  border-left: 7px solid var(--color-text);
+  margin-left: 0.3rem;
+}
+
+.issue-episodes-nav__arrow--left {
+  border-right: 7px solid var(--color-text);
+  margin-right: 0.3rem;
+}
+
+.issue-episodes-nav .series-issue-row.is-current {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.issue-episodes-nav__current-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .issue-thumb img,
 .album-thumb img,
 .artwork-thumb img {
@@ -707,6 +798,7 @@ main > h1 {
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .dracka-collapsible__content {
@@ -1139,6 +1231,7 @@ main > h1 {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+    align-items: center;
   z-index: 1000;
   pointer-events: none;
   visibility: hidden;
@@ -1152,24 +1245,29 @@ main > h1 {
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  padding: 1.25rem 0.75rem 2rem;
+    justify-content: flex-start;
+  align-items: center;
+  padding: 1.25rem 0.75rem clamp(1rem, 4vh, 2.5rem);
   transform: translateY(-100%);
   transition: transform 0.6s ease;
+  position: relative;
+  z-index: 10;
 }
 
 .overlay-dismiss-zone {
-  flex: 1;
-  width: 100%;
+  position: fixed;
+  inset: 0;
   border: 0;
   background: transparent;
   padding: 0;
   margin: 0;
+  z-index: 5;
 }
 
 .overlay-header {
   display: flex;
   justify-content: flex-end;
+  width: 100%;
 }
 
 .overlay-close {
@@ -1181,18 +1279,62 @@ main > h1 {
 
 .overlay-nav,
 .overlay-info {
-  margin-top: 1rem;
+  width: 80vw;
+  margin-top: 0;
+}
+
+.mobile-overlay--menu .overlay-nav {
+  margin-top: 13rem;
+}
+
+.overlay-nav .overlay-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.overlay-nav .overlay-menu > li > a,
+.overlay-nav .overlay-menu > li > span > a {
+  display: block;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  border-radius: 0.25rem;
+  transition: background-color 0.2s ease;
+}
+
+.overlay-nav .overlay-menu > li > a:hover,
+.overlay-nav .overlay-menu > li > span > a:hover {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .mobile-overlay--menu .overlay-social {
   margin-top: auto;
+  width: 80vw;
+}
+
+.mobile-overlay--info .overlay-info {
+  margin-top: clamp(3rem, 14.5vh, 7.2rem);
+  margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
 }
 
 .overlay-social ul {
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  gap: 1rem;
   list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.overlay-social li {
+  flex: 0 0 auto;
 }
 
 .social-icon svg {
@@ -1204,26 +1346,37 @@ main > h1 {
 .social-menu {
     display: flex;
     justify-content: center;
-    gap: 2rem;
+    gap: 1rem;
     list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.social-menu li {
+  flex: 0 0 auto;
 }
 
 .social-menu a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;  /* ancho fijo del link */
-    height: 36px; /* alto fijo del link */
+    width: 44px;
+    height: 44px;
+    padding: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.social-menu a:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
 }
 
 .social-menu svg {
-    width: 100%;   /* rellena el link */
-    height: 100%;
+    width: 24px;
+    height: 24px;
     fill: currentColor;
-}
-
-.social-menu a:hover svg {
-  fill: var(--color-accent);
 }
 
 .mobile-overlay.is-open {
@@ -1243,13 +1396,18 @@ main > h1 {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+  width: 100%;
 }
 
 .overlay-info {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  text-align: center;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 0.25rem;
 }
 
 .no-scroll {
@@ -1364,6 +1522,32 @@ main > h1 {
   .issue-single .issue-content canvas {
     display: block;
     height: auto !important;
+  }
+
+  .issue-episodes-nav {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .issue-episodes-nav__bar {
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .issue-episodes-nav__segment {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.4rem 0.15rem;
+    font-size: 0.84rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .issue-episodes-nav__segment + .issue-episodes-nav__segment {
+    border-left-width: 1px;
   }
 }
 

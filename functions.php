@@ -1788,6 +1788,97 @@ function dracka_get_series_issue_numbers($series_id, $exclude_post_id = 0): arra
 }
 
 /**
+ * Builds series-scoped navigation data for a single issue page.
+ *
+ * Returns ordered published issues in the same series and navigation targets
+ * relative to the current issue position.
+ *
+ * @param int $issue_id Current issue post ID.
+ * @return array<string, mixed>
+ */
+function dracka_get_issue_series_navigation($issue_id): array
+{
+    $navigation = [
+        'series_id' => 0,
+        'issues'    => [],
+        'previous'  => null,
+        'next'      => null,
+        'last'      => null,
+    ];
+
+    $issue_id = (int) $issue_id;
+    if ($issue_id <= 0) {
+        return $navigation;
+    }
+
+    $series_id = (int) get_post_meta($issue_id, 'dracka_series_id', true);
+    $issue_number = (int) get_post_meta($issue_id, DRACKA_ISSUE_NUMBER_META_KEY, true);
+
+    if ($series_id <= 0 || $issue_number <= 0) {
+        return $navigation;
+    }
+
+    $issue_query = new WP_Query([
+        'post_type'      => 'issue',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'no_found_rows'  => true,
+        'meta_query'     => [
+            [
+                'key'     => 'dracka_series_id',
+                'value'   => $series_id,
+                'compare' => '=',
+                'type'    => 'NUMERIC',
+            ],
+        ],
+        'dracka_sort_by_issue_number' => true,
+        'dracka_issue_number_direction' => 'ASC',
+    ]);
+
+    $issues = [];
+    $current_index = -1;
+
+    if ($issue_query->have_posts()) {
+        while ($issue_query->have_posts()) {
+            $issue_query->the_post();
+
+            $listed_issue_id = (int) get_the_ID();
+            $listed_issue_number = (int) get_post_meta($listed_issue_id, DRACKA_ISSUE_NUMBER_META_KEY, true);
+
+            if ($listed_issue_number <= 0) {
+                continue;
+            }
+
+            $issues[] = [
+                'id'     => $listed_issue_id,
+                'number' => $listed_issue_number,
+                'title'  => get_the_title($listed_issue_id),
+                'url'    => get_permalink($listed_issue_id),
+                'date'   => get_the_date('', $listed_issue_id),
+            ];
+
+            if ($listed_issue_id === $issue_id) {
+                $current_index = count($issues) - 1;
+            }
+        }
+    }
+
+    wp_reset_postdata();
+
+    if ($current_index < 0 || count($issues) === 0) {
+        return $navigation;
+    }
+
+    $navigation['series_id'] = $series_id;
+    $navigation['issues'] = $issues;
+    $navigation['previous'] = $current_index > 0 ? $issues[$current_index - 1] : null;
+    $navigation['next'] = $current_index < count($issues) - 1 ? $issues[$current_index + 1] : null;
+    $navigation['last'] = $current_index < count($issues) - 1 ? $issues[count($issues) - 1] : null;
+
+    return $navigation;
+}
+
+/**
  * Returns the smallest unused positive issue number for a series.
  *
  * @param int $series_id Series post ID.

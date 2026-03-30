@@ -457,7 +457,7 @@ function setupCollapsibleBlock(blockElement) {
     });
   };
 
-  toggleButton.addEventListener('click', () => {
+  const toggleBlock = () => {
     if (isTransitioning) {
       return;
     }
@@ -473,7 +473,30 @@ function setupCollapsibleBlock(blockElement) {
     } else {
       collapseContent();
     }
+  };
+
+  toggleButton.addEventListener('click', (event) => {
+    if (event.target instanceof HTMLElement && event.target.closest('[data-collapsible-ignore-toggle]')) {
+      return;
+    }
+
+    toggleBlock();
   });
+
+  if (toggleButton.tagName !== 'BUTTON') {
+    toggleButton.addEventListener('keydown', (event) => {
+      if (!(event instanceof KeyboardEvent)) {
+        return;
+      }
+
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
+
+      event.preventDefault();
+      toggleBlock();
+    });
+  }
 }
 
 /**
