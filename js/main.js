@@ -320,7 +320,6 @@ function setupResponsiveHeaderCollapse() {
   }
 
   const mobileTabletQuery = window.matchMedia('(max-width: 1023px)');
-  const isHomePage = bodyElement.classList.contains('home') || bodyElement.classList.contains('front-page');
   let lastScrollY = window.scrollY;
   let isCollapsed = false;
 
@@ -335,12 +334,6 @@ function setupResponsiveHeaderCollapse() {
 
   const updateHeaderState = () => {
     if (!mobileTabletQuery.matches) {
-      setCollapsed(false);
-      lastScrollY = window.scrollY;
-      return;
-    }
-
-    if (isHomePage) {
       setCollapsed(false);
       lastScrollY = window.scrollY;
       return;
