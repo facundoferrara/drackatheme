@@ -44,7 +44,11 @@ $empty_messages = [
     <?php if (have_posts()) : ?>
         <div class="artwork-grid">
             <?php while (have_posts()) : the_post(); ?>
+                <?php $premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10); ?>
                 <article <?php post_class('artwork-card'); ?>>
+                    <?php if ($premiere_badge_markup !== '') : ?>
+                        <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($premiere_badge_markup); ?></div>
+                    <?php endif; ?>
                     <?php if (has_post_thumbnail()) : ?>
                         <a class="artwork-thumb" href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr(get_the_title()); ?>"><?php the_post_thumbnail('medium'); ?></a>
                     <?php endif; ?>

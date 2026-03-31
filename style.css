@@ -211,11 +211,32 @@ main > h1 {
   overflow: hidden;
 }
 
+.album-card {
+  position: relative;
+}
+
+.issue-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.album-card {
+  isolation: isolate;
+}
+
 .card-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-bottom: 0.65rem;
+}
+
+.card-badges--ribbon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  pointer-events: none;
 }
 
 .content-badge {
@@ -233,9 +254,77 @@ main > h1 {
   text-transform: uppercase;
 }
 
+.content-badge__label,
+.content-badge__fold {
+  pointer-events: none;
+}
+
 .content-badge--muted {
   background: transparent;
   color: var(--color-muted);
+}
+
+.content-badge--premiere {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  min-width: 5rem;
+  width: 5rem;
+  padding: 0;
+  height: 5rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-accent) 88%, #ffffff 12%) 0%,
+    var(--color-accent) 100%
+  );
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  clip-path: polygon(0 70%, 70% 0, 100% 0, 0 100%);
+  color: #ffffff;
+  font-weight: 900;
+  overflow: visible;
+  z-index: 3;
+}
+
+.card-badges--ribbon .content-badge--premiere {
+  transform: translate(-0.5rem, -0.5rem);
+  transform-origin: left top;
+}
+
+.content-badge--premiere .content-badge__label {
+  position: absolute;
+  top: 43%;
+  left: 43%;
+  z-index: 3;
+  font-size: 0.7rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  transform-origin: center;
+}
+
+.card-badges--ribbon .content-badge__fold {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  width: 20px;
+  height: 20px;
+  background: color-mix(in srgb, var(--color-accent) 72%, #000000 28%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  border-radius: 0;
+}
+
+.card-badges--ribbon .content-badge__fold--top {
+  top: -0.5rem;
+  right: 0.5rem;
+}
+
+.card-badges--ribbon .content-badge__fold--bottom {
+  left: -0.5rem;
+  bottom: 0.5rem;
 }
 
 .library-type {
@@ -461,6 +550,17 @@ main > h1 {
   margin: 0;
 }
 
+.album-card .album-thumb {
+  position: relative;
+  z-index: 2;
+}
+
+.issue-card .issue-thumb,
+.issue-card .library-thumb {
+  position: relative;
+  z-index: 2;
+}
+
 .album-card .album-thumb img {
   margin: 0;
   border-radius: 0;
@@ -505,14 +605,6 @@ main > h1 {
 .artwork-card .album-excerpt,
 .artwork-card .artwork-excerpt {
   display: none;
-}
-
-.artwork-card .card-badges {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  z-index: 1;
-  margin: 0;
 }
 
 .series-issues h2,
@@ -572,7 +664,10 @@ main > h1 {
 }
 
 .series-hero-cover {
+  position: relative;
   width: 100%;
+  overflow: hidden;
+  border-radius: 3px;
 }
 
 .series-hero-cover img {
@@ -694,7 +789,12 @@ main > h1 {
 }
 
 .series-issue-row__media {
+  position: relative;
   width: 100%;
+}
+
+.series-issue-row__media {
+  isolation: isolate;
 }
 
 .series-issue-row__thumb-link,
@@ -705,6 +805,11 @@ main > h1 {
   border-radius: 3px;
   overflow: hidden;
   background: var(--color-panel);
+}
+
+.series-issue-row__thumb-link {
+  position: relative;
+  z-index: 2;
 }
 
 .series-issue-row__thumb-link img {
@@ -756,6 +861,8 @@ main > h1 {
   color: var(--color-muted);
   margin: 0;
 }
+
+
 
 /* =========================
    HOMEPAGE COLLAPSIBLE BLOCKS
@@ -970,6 +1077,13 @@ main > h1 {
 
 .dracka-newsletter-card__placeholder {
   background: linear-gradient(120deg, var(--color-panel), var(--color-surface));
+}
+
+.dracka-card-badges {
+  top: 0;
+  left: 0;
+  z-index: 3;
+  margin: 0;
 }
 
 .dracka-newsletter-card__title {

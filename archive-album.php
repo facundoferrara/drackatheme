@@ -94,6 +94,7 @@ $card_class = $active_tab === 'albums' ? 'album-card' : 'artwork-card';
                 $type_badge = $post_type === 'album' ? 'Album' : 'Artwork';
                 $is_standalone = false;
                 $album_elements_count = 0;
+                $premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10);
 
                 if ($post_type === 'artwork') {
                     $album_id = (int) get_post_meta(get_the_ID(), 'dracka_album_id', true);
@@ -103,6 +104,9 @@ $card_class = $active_tab === 'albums' ? 'album-card' : 'artwork-card';
                 }
                 ?>
                 <article <?php post_class($card_class); ?>>
+                    <?php if ($premiere_badge_markup !== '') : ?>
+                        <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($premiere_badge_markup); ?></div>
+                    <?php endif; ?>
                     <?php if ($post_type === 'album') : ?>
                         <?php if (has_post_thumbnail()) : ?>
                             <a class="album-thumb" href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr(get_the_title()); ?>"><?php the_post_thumbnail('medium'); ?></a>

@@ -99,9 +99,13 @@ $has_episode_navigation = !empty($series_issues);
                                     $series_issue_url = isset($series_issue['url']) ? (string) $series_issue['url'] : get_permalink($series_issue_id);
                                     $series_issue_date = isset($series_issue['date']) ? (string) $series_issue['date'] : get_the_date('', $series_issue_id);
                                     $is_current_issue = $series_issue_id === $issue_id;
+                                    $issue_premiere_badge_markup = dracka_get_premiere_badge_markup($series_issue_id, 10);
                                     ?>
                                     <article class="series-issue-row<?php echo $is_current_issue ? ' is-current' : ''; ?>">
                                         <div class="series-issue-row__media">
+                                            <?php if ($issue_premiere_badge_markup !== '') : ?>
+                                                <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($issue_premiere_badge_markup); ?></div>
+                                            <?php endif; ?>
                                             <?php if (has_post_thumbnail($series_issue_id)) : ?>
                                                 <?php if ($is_current_issue) : ?>
                                                     <span class="series-issue-row__thumb-link" aria-hidden="true">

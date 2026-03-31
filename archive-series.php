@@ -35,6 +35,7 @@ if ($active_tab === 'issues') {
                 $post_type = get_post_type();
                 $type_badge = $post_type === 'series' ? 'Series' : 'Issue';
                 $is_standalone = false;
+                $premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10);
 
                 if ($post_type === 'issue') {
                     $series_id = (int) get_post_meta(get_the_ID(), 'dracka_series_id', true);
@@ -42,6 +43,9 @@ if ($active_tab === 'issues') {
                 }
                 ?>
                 <article <?php post_class('issue-card'); ?>>
+                    <?php if ($premiere_badge_markup !== '') : ?>
+                        <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($premiere_badge_markup); ?></div>
+                    <?php endif; ?>
                     <h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
                     <?php if (has_post_thumbnail()) : ?>
                         <div class="library-thumb"><?php the_post_thumbnail('medium'); ?></div>

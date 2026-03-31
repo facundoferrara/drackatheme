@@ -46,6 +46,7 @@ $issues = new WP_Query([
             $status_label    = isset($custom_statuses[$status_slug])
                 ? $custom_statuses[$status_slug]
                 : ucfirst(str_replace('-', ' ', $status_slug));
+            $series_premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10);
             ?>
 
             <div class="series-hero">
@@ -62,6 +63,9 @@ $issues = new WP_Query([
                     <div class="series-hero-aside">
                         <?php if (has_post_thumbnail()) : ?>
                             <div class="series-hero-cover">
+                                <?php if ($series_premiere_badge_markup !== '') : ?>
+                                    <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($series_premiere_badge_markup); ?></div>
+                                <?php endif; ?>
                                 <?php the_post_thumbnail('large'); ?>
                             </div>
                         <?php endif; ?>
@@ -112,8 +116,12 @@ $issues = new WP_Query([
         <?php if ($issues->have_posts()) : ?>
             <div class="series-issues-list">
                 <?php while ($issues->have_posts()) : $issues->the_post(); ?>
+                    <?php $issue_premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10); ?>
                     <article <?php post_class('series-issue-row'); ?>>
                         <div class="series-issue-row__media">
+                            <?php if ($issue_premiere_badge_markup !== '') : ?>
+                                <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($issue_premiere_badge_markup); ?></div>
+                            <?php endif; ?>
                             <?php if (has_post_thumbnail()) : ?>
                                 <a href="<?php the_permalink(); ?>" class="series-issue-row__thumb-link" aria-label="<?php echo esc_attr(get_the_title()); ?>">
                                     <?php the_post_thumbnail('medium'); ?>

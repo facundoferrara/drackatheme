@@ -457,6 +457,91 @@ function dracka_get_library_preview_total_count()
 }
 
 /**
+ * Checks whether a post is within the premiere window.
+ *
+ * A post is considered "premiere" when it is publicly visible and its
+ * publish date is not older than the configured day window.
+ *
+ * @param int $post_id Post ID.
+ * @param int $days    Premiere window in days.
+ * @return bool
+ */
+function dracka_is_post_premiere($post_id, $days = 10)
+{
+    $post_id = (int) $post_id;
+    $days = max(1, (int) $days);
+
+    if ($post_id <= 0) {
+        return false;
+    }
+
+    $post = get_post($post_id);
+
+    if (!$post instanceof WP_Post) {
+        return false;
+    }
+
+    $post_status = (string) $post->post_status;
+    $post_type = (string) $post->post_type;
+
+    if (!$post_status || !$post_type) {
+        return false;
+    }
+
+    if ($post_type === 'series') {
+        $allowed_series_statuses = dracka_get_series_public_statuses();
+        if (!is_array($allowed_series_statuses) || !in_array($post_status, $allowed_series_statuses, true)) {
+            return false;
+        }
+    } elseif ($post_status !== 'publish') {
+        return false;
+    }
+
+    $published_timestamp = (int) get_post_time('U', true, $post);
+
+    if ($published_timestamp <= 0 && !empty($post->post_date_gmt) && $post->post_date_gmt !== '0000-00-00 00:00:00') {
+        $published_timestamp = (int) mysql2date('U', $post->post_date_gmt, false);
+    }
+
+    if ($published_timestamp <= 0 && !empty($post->post_date) && $post->post_date !== '0000-00-00 00:00:00') {
+        $published_timestamp = (int) mysql2date('U', $post->post_date, false);
+    }
+
+    $current_timestamp = time();
+
+    if ($published_timestamp <= 0 || $current_timestamp <= 0) {
+        return false;
+    }
+
+    $age_in_seconds = $current_timestamp - $published_timestamp;
+    $window_in_seconds = DAY_IN_SECONDS * $days;
+
+    if ($age_in_seconds < 0) {
+        return false;
+    }
+
+    return $age_in_seconds <= $window_in_seconds;
+}
+
+/**
+ * Returns the premiere badge markup for a post when applicable.
+ *
+ * @param int $post_id Post ID.
+ * @param int $days    Premiere window in days.
+ * @return string
+ */
+function dracka_get_premiere_badge_markup($post_id, $days = 10)
+{
+    if (!dracka_is_post_premiere($post_id, $days)) {
+        return '';
+    }
+
+    return '<span class="content-badge content-badge--premiere"><span class="content-badge__label">PREMIERE</span></span>'
+        . '<span class="content-badge__fold content-badge__fold--top" aria-hidden="true"></span>'
+        . '<span class="content-badge__fold content-badge__fold--bottom" aria-hidden="true"></span>';
+}
+
+/**
  * Renders a single content card for the collapsible homepage grid.
  *
  * Supports issues, artwork, and newsletter post cards.
@@ -493,6 +578,16 @@ function dracka_render_content_card_markup($post_id, $content_type)
         $css_prefix = 'dracka-issues';
     }
 
+    $badge_markup = '';
+    $premiere_enabled_types = ['issue', 'series', 'artwork', 'album'];
+
+    if (in_array((string) $post_type, $premiere_enabled_types, true)) {
+        $premiere_badge = dracka_get_premiere_badge_markup($post_id, 10);
+        if ($premiere_badge !== '') {
+            $badge_markup = '<div class="card-badges card-badges--ribbon dracka-card-badges">' . $premiere_badge . '</div>';
+        }
+    }
+
     $title = get_the_title($post_id);
     $permalink = get_permalink($post_id);
     $thumbnail = get_the_post_thumbnail(
@@ -511,9 +606,10 @@ function dracka_render_content_card_markup($post_id, $content_type)
 
     if ($content_type === 'artwork') {
         return sprintf(
-            '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link">%3$s</a></article>',
+            '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link">%3$s%4$s</a></article>',
             esc_attr($css_prefix),
             esc_url($permalink),
+            $badge_markup,
             $thumbnail
         );
     }
@@ -541,9 +637,10 @@ function dracka_render_content_card_markup($post_id, $content_type)
     }
 
     return sprintf(
-        '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link">%3$s<span class="%1$s-card__title">%4$s</span></a></article>',
+        '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link">%3$s%4$s<span class="%1$s-card__title">%5$s</span></a></article>',
         esc_attr($css_prefix),
         esc_url($permalink),
+        $badge_markup,
         $thumbnail,
         esc_html($title)
     );
