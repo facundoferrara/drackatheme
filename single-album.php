@@ -51,7 +51,7 @@ $album_id = get_the_ID();
                     <article <?php post_class('artwork-card'); ?>>
                         <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
                         <?php if (has_post_thumbnail()) : ?>
-                            <div class="artwork-thumb"><?php the_post_thumbnail('medium'); ?></div>
+                            <a href="<?php the_permalink(); ?>" class="artwork-thumb" aria-label="<?php echo esc_attr(get_the_title()); ?>"><?php the_post_thumbnail('medium'); ?></a>
                         <?php endif; ?>
                     </article>
                 <?php endwhile; ?>

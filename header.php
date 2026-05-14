@@ -12,13 +12,15 @@
 
   <header class="site-header">
     <div class="header-inner">
-      <button
-        class="header-action header-action--info"
-        type="button"
-        aria-label="Open info panel"
-        aria-expanded="false"
-        aria-controls="mobile-info-panel"
-        data-panel-target="mobile-info-panel">🛈</button>
+      <?php if (dracka_info_panel_has_content()) : ?>
+        <button
+          class="header-action header-action--info"
+          type="button"
+          aria-label="Open info panel"
+          aria-expanded="false"
+          aria-controls="mobile-info-panel"
+          data-panel-target="mobile-info-panel">ℹ</button>
+      <?php endif; ?>
       <?php
       $dracka_logo_data = dracka_get_active_logo_animation_data();
       $dracka_site_name = get_bloginfo('name');
@@ -101,9 +103,7 @@
           </nav>
         <?php else : ?>
           <section class="overlay-info" aria-label="Information panel">
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-            <p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+            <?php dracka_render_info_panel_columns(); ?>
           </section>
         <?php endif; ?>
 

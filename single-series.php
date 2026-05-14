@@ -26,6 +26,7 @@ $issues = new WP_Query([
 ?>
 
 <main class="series-single">
+    <?php dracka_render_age_gate(); ?>
     <?php if (have_posts()) : ?>
         <?php while (have_posts()) : the_post(); ?>
             <?php
@@ -41,11 +42,8 @@ $issues = new WP_Query([
                 $genre_label = implode(', ', array_filter($genre_names));
             }
 
-            $status_slug     = get_post_status();
-            $custom_statuses = dracka_get_series_custom_statuses();
-            $status_label    = isset($custom_statuses[$status_slug])
-                ? $custom_statuses[$status_slug]
-                : ucfirst(str_replace('-', ' ', $status_slug));
+            $status_slug = dracka_normalize_series_status_slug((string) get_post_status());
+            $status_label = dracka_get_series_status_label($status_slug);
             $series_premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10);
             ?>
 
@@ -133,7 +131,7 @@ $issues = new WP_Query([
                         <div class="series-issue-row__content">
                             <div class="series-issue-row__title-wrap">
                                 <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-                                <div class="series-issue-row__views"><?php echo dracka_render_eye_icon(); ?><?php echo do_shortcode('[views]'); ?></div>
+                                <div class="series-issue-row__views"><?php echo dracka_render_eye_icon(); ?><?php echo wp_kses_post(do_shortcode('[views]')); ?></div>
                             </div>
                             <p class="series-issue-row__date"><?php echo esc_html(get_the_date()); ?></p>
                         </div>

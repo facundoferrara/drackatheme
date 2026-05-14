@@ -155,7 +155,7 @@ function dracka_register_blocks()
             $block_config['editor_script'],
             get_template_directory_uri() . $block_config['editor_js'],
             ['wp-blocks', 'wp-element', 'wp-i18n', 'wp-block-editor', 'wp-components'],
-            '0.1',
+            (string) filemtime(get_template_directory() . $block_config['editor_js']),
             true
         );
 
@@ -204,7 +204,7 @@ function dracka_register_blocks()
         'dracka-news-ticker-block-editor',
         get_template_directory_uri() . '/js/blocks/news-ticker.js',
         ['wp-blocks', 'wp-element', 'wp-i18n', 'wp-block-editor', 'wp-components'],
-        '0.1',
+        (string) filemtime(get_template_directory() . '/js/blocks/news-ticker.js'),
         true
     );
 
@@ -386,14 +386,14 @@ function dracka_get_library_preview_query_args($offset, $limit, $sort_mode = 'ne
 {
     $sort_mode = dracka_normalize_latest_sort_mode($sort_mode);
 
-    $series_statuses = dracka_get_series_public_statuses();
+    $series_statuses = dracka_get_series_accepted_statuses();
     if (!is_array($series_statuses)) {
         $series_statuses = [];
     }
 
     $query_args = [
         'post_type'      => ['issue', 'series'],
-        'post_status'    => array_values(array_unique(array_merge(['publish'], $series_statuses))),
+        'post_status'    => $series_statuses,
         'posts_per_page' => $limit,
         'offset'         => $offset,
         'no_found_rows'  => true,
@@ -457,6 +457,64 @@ function dracka_get_library_preview_total_count()
 }
 
 /**
+ * Returns a map of album ID => published artwork count for the given album IDs.
+ *
+ * Fetches all counts in a single batched query to avoid N+1 lookups in archive
+ * templates. Returns an array keyed by album ID with 0 as the default count.
+ *
+ * @param int[] $album_ids List of album post IDs to count artwork for.
+ * @return array<int, int>
+ */
+function dracka_get_album_artwork_counts(array $album_ids): array
+{
+    global $wpdb;
+
+    $album_ids = array_values(array_filter(array_map('intval', $album_ids)));
+
+    if (empty($album_ids)) {
+        return [];
+    }
+
+    $counts = array_fill_keys($album_ids, 0);
+
+    $placeholders = implode(', ', array_fill(0, count($album_ids), '%d'));
+    $query_sql = "
+        SELECT CAST(pm.meta_value AS UNSIGNED) AS album_id, COUNT(p.ID) AS artwork_count
+        FROM {$wpdb->postmeta} pm
+        INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+        WHERE pm.meta_key = %s
+          AND p.post_type = %s
+          AND p.post_status = %s
+          AND CAST(pm.meta_value AS UNSIGNED) IN ($placeholders)
+        GROUP BY CAST(pm.meta_value AS UNSIGNED)
+    ";
+
+    $query_args   = array_merge(['dracka_album_id', 'artwork', 'publish'], $album_ids);
+    $prepared_sql = $wpdb->prepare($query_sql, $query_args);
+
+    if (!is_string($prepared_sql)) {
+        return $counts;
+    }
+
+    $rows = $wpdb->get_results($prepared_sql, ARRAY_A);
+
+    if (!is_array($rows)) {
+        return $counts;
+    }
+
+    foreach ($rows as $row) {
+        $album_id      = isset($row['album_id'])      ? (int) $row['album_id']      : 0;
+        $artwork_count = isset($row['artwork_count']) ? (int) $row['artwork_count'] : 0;
+
+        if ($album_id > 0) {
+            $counts[$album_id] = $artwork_count;
+        }
+    }
+
+    return $counts;
+}
+
+/**
  * Checks whether a post is within the premiere window.
  *
  * A post is considered "premiere" when it is publicly visible and its
@@ -489,7 +547,7 @@ function dracka_is_post_premiere($post_id, $days = 10)
     }
 
     if ($post_type === 'series') {
-        $allowed_series_statuses = dracka_get_series_public_statuses();
+        $allowed_series_statuses = dracka_get_series_accepted_statuses();
         if (!is_array($allowed_series_statuses) || !in_array($post_status, $allowed_series_statuses, true)) {
             return false;
         }
@@ -562,7 +620,7 @@ function dracka_render_content_card_markup($post_id, $content_type)
     $post_status = get_post_status($post_id);
 
     if ($post_type === 'series') {
-        $allowed_series_statuses = dracka_get_series_public_statuses();
+        $allowed_series_statuses = dracka_get_series_accepted_statuses();
         if (!is_array($allowed_series_statuses) || !in_array($post_status, $allowed_series_statuses, true)) {
             return '';
         }
@@ -1158,6 +1216,42 @@ function dracka_customize_register($wp_customize)
             ]
         ));
     }
+
+    // Info Panel section
+    $wp_customize->add_section('dracka_info_panel', [
+        'title'       => __('Info Panel', 'dracka'),
+        'priority'    => 40,
+        'description' => __('Content shown in the mobile info panel. Leave all columns empty to hide the panel button in the header.', 'dracka'),
+    ]);
+
+    for ($col_num = 1; $col_num <= 3; $col_num++) {
+        $col_label  = sprintf(__('Column %d', 'dracka'), $col_num);
+        $title_id   = 'dracka_info_col' . $col_num . '_title';
+        $content_id = 'dracka_info_col' . $col_num . '_content';
+
+        $wp_customize->add_setting($title_id, [
+            'default'           => '',
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+
+        $wp_customize->add_control($title_id, [
+            'label'   => $col_label . ' — ' . __('Heading', 'dracka'),
+            'section' => 'dracka_info_panel',
+            'type'    => 'text',
+        ]);
+
+        $wp_customize->add_setting($content_id, [
+            'default'           => '',
+            'sanitize_callback' => 'wp_kses_post',
+        ]);
+
+        $wp_customize->add_control($content_id, [
+            'label'       => $col_label . ' — ' . __('Content', 'dracka'),
+            'section'     => 'dracka_info_panel',
+            'type'        => 'textarea',
+            'description' => __('HTML allowed: &lt;a&gt;, &lt;p&gt;, &lt;br&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;li&gt;', 'dracka'),
+        ]);
+    }
 }
 add_action('customize_register', 'dracka_customize_register');
 
@@ -1176,7 +1270,8 @@ function dracka_add_customizer_css()
     $values = [];
 
     foreach ($defaults as $key => $default) {
-        $values[$key] = get_theme_mod('dracka_' . $key, $default);
+        $raw = get_theme_mod('dracka_' . $key, $default);
+        $values[$key] = sanitize_hex_color($raw) ?: $default;
     }
 
     $custom_css = ':root{'
@@ -1189,6 +1284,98 @@ function dracka_add_customizer_css()
         . '}';
 
     wp_add_inline_style('dracka-style', $custom_css);
+}
+
+/**
+ * Returns the column data for the mobile info panel from Customizer settings.
+ *
+ * @return array<int, array{title: string, content: string}>
+ */
+function dracka_get_info_panel_columns(): array
+{
+    $columns = [];
+
+    for ($i = 1; $i <= 3; $i++) {
+        $columns[] = [
+            'title'   => (string) get_theme_mod('dracka_info_col' . $i . '_title', ''),
+            'content' => (string) get_theme_mod('dracka_info_col' . $i . '_content', ''),
+        ];
+    }
+
+    return $columns;
+}
+
+/**
+ * Returns true if at least one info panel column has content.
+ *
+ * Used to conditionally show the info panel trigger button in the header.
+ *
+ * @return bool
+ */
+function dracka_info_panel_has_content(): bool
+{
+    foreach (dracka_get_info_panel_columns() as $col) {
+        if ($col['content'] !== '') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Renders the info panel column layout for the mobile info overlay.
+ *
+ * Only columns with content are output. Nothing is rendered when all
+ * columns are empty.
+ *
+ * @return void
+ */
+function dracka_render_info_panel_columns(): void
+{
+    $allowed_html = [
+        'a'      => ['href' => true, 'target' => true, 'rel' => true],
+        'p'      => [],
+        'br'     => [],
+        'strong' => [],
+        'em'     => [],
+        'ul'     => [],
+        'ol'     => [],
+        'li'     => [],
+    ];
+
+    $columns = dracka_get_info_panel_columns();
+    $has_any = false;
+
+    foreach ($columns as $col) {
+        if ($col['content'] !== '') {
+            $has_any = true;
+            break;
+        }
+    }
+
+    if (!$has_any) {
+        return;
+    }
+
+    echo '<div class="info-panel-columns">';
+
+    foreach ($columns as $col) {
+        if ($col['content'] === '') {
+            continue;
+        }
+
+        echo '<div class="info-panel-col">';
+
+        if ($col['title'] !== '') {
+            echo '<h3 class="info-panel-col__title">' . esc_html($col['title']) . '</h3>';
+        }
+
+        echo '<div class="info-panel-col__content">' . wp_kses($col['content'], $allowed_html) . '</div>';
+        echo '</div>';
+    }
+
+    echo '</div>';
 }
 
 /**
@@ -1345,11 +1532,59 @@ add_action('init', 'dracka_register_series_taxonomies');
 function dracka_get_series_custom_statuses()
 {
     return [
-        'ongoing'     => 'Ongoing',
-        'coming-soon' => 'Coming Soon',
-        'cancelled'   => 'Cancelled',
-        'finalized'   => 'Finalized',
+        'ongoing'      => 'Ongoing',
+        'upcoming'     => 'Upcoming',
+        'hiatus'       => 'Hiatus',
+        'cancelled'    => 'Cancelled',
+        'discontinued' => 'Discontinued',
+        'finished'     => 'Finished',
     ];
+}
+
+/**
+ * Returns legacy-to-canonical series status aliases.
+ *
+ * @return array<string, string>
+ */
+function dracka_get_series_status_aliases()
+{
+    return [
+        'publish'     => 'ongoing',
+        'coming-soon' => 'upcoming',
+        'finalized'   => 'finished',
+    ];
+}
+
+/**
+ * Returns canonical series status slug.
+ *
+ * @param string $status_slug Status slug.
+ * @return string
+ */
+function dracka_normalize_series_status_slug($status_slug)
+{
+    $status_slug = (string) $status_slug;
+    $status_aliases = dracka_get_series_status_aliases();
+
+    return $status_aliases[$status_slug] ?? $status_slug;
+}
+
+/**
+ * Returns human-readable label for a series status.
+ *
+ * @param string $status_slug Status slug.
+ * @return string
+ */
+function dracka_get_series_status_label($status_slug)
+{
+    $normalized_status = dracka_normalize_series_status_slug((string) $status_slug);
+    $custom_statuses = dracka_get_series_custom_statuses();
+
+    if (isset($custom_statuses[$normalized_status])) {
+        return $custom_statuses[$normalized_status];
+    }
+
+    return ucfirst(str_replace('-', ' ', $normalized_status));
 }
 
 /**
@@ -1359,7 +1594,20 @@ function dracka_get_series_custom_statuses()
  */
 function dracka_get_series_public_statuses()
 {
-    return array_merge(['publish'], array_keys(dracka_get_series_custom_statuses()));
+    return array_keys(dracka_get_series_custom_statuses());
+}
+
+/**
+ * Returns statuses accepted while transitioning legacy series data.
+ *
+ * @return array<int, string>
+ */
+function dracka_get_series_accepted_statuses()
+{
+    return array_values(array_unique(array_merge(
+        dracka_get_series_public_statuses(),
+        array_keys(dracka_get_series_status_aliases())
+    )));
 }
 
 /**
@@ -1413,14 +1661,44 @@ add_action('init', 'dracka_register_series_post_statuses', 20);
 function dracka_limit_series_custom_status_scope($data, $postarr)
 {
     $custom_statuses = array_keys(dracka_get_series_custom_statuses());
+    $legacy_series_statuses = array_values(array_filter(
+        array_keys(dracka_get_series_status_aliases()),
+        static function ($status_slug) {
+            return $status_slug !== 'publish';
+        }
+    ));
+    $disallowed_non_series_statuses = array_values(array_unique(array_merge($custom_statuses, $legacy_series_statuses)));
 
-    if (($data['post_type'] ?? '') !== 'series' && in_array($data['post_status'] ?? '', $custom_statuses, true)) {
+    if (($data['post_type'] ?? '') === 'series' && !empty($data['post_status'])) {
+        $data['post_status'] = dracka_normalize_series_status_slug((string) $data['post_status']);
+    }
+
+    if (($data['post_type'] ?? '') !== 'series' && in_array($data['post_status'] ?? '', $disallowed_non_series_statuses, true)) {
         $data['post_status'] = 'draft';
     }
 
     return $data;
 }
 add_filter('wp_insert_post_data', 'dracka_limit_series_custom_status_scope', 10, 2);
+
+/**
+ * Shows a brief status normalization note on Series editor screens.
+ *
+ * @return void
+ */
+function dracka_render_series_status_editor_note()
+{
+    $screen = get_current_screen();
+
+    if (!$screen || $screen->post_type !== 'series') {
+        return;
+    }
+
+    echo '<div class="misc-pub-section">';
+    echo '<strong>Status:</strong> Published series are stored as <em>Ongoing</em>.';
+    echo '</div>';
+}
+add_action('post_submitbox_misc_actions', 'dracka_render_series_status_editor_note');
 
 /**
  * Allows SVG uploads for privileged content editors.
@@ -1449,6 +1727,9 @@ const DRACKA_SERIES_AUTHOR_META_KEY = 'dracka_series_author';
 const DRACKA_SERIES_DESCRIPTION_META_KEY = 'dracka_series_description';
 const DRACKA_SERIES_YEAR_META_KEY = 'dracka_publication_year';
 const DRACKA_ISSUE_NUMBER_META_KEY = 'dracka_series_order';
+const DRACKA_SERIES_RATING_META_KEY = 'dracka_series_rating';
+const DRACKA_SERIES_GATE_TITLE_META_KEY = 'dracka_series_gate_title';
+const DRACKA_SERIES_GATE_BODY_META_KEY = 'dracka_series_gate_body';
 
 /**
  * Enqueues media scripts for issue and series editor screens.
@@ -1718,6 +1999,124 @@ function dracka_add_relationship_metaboxes()
 }
 add_action('add_meta_boxes', 'dracka_add_relationship_metaboxes');
 
+// ---------------------------------------------------------------------------
+// Age Gate – resolver and front-end render helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the series ID that governs the age gate for the current page.
+ *
+ * On a single series page the queried object IS the series.
+ * On a single issue page the governing series is the one linked via meta.
+ *
+ * @return int Series post ID, or 0 when not applicable.
+ */
+function dracka_get_gate_series_id(): int
+{
+    if (is_singular('series')) {
+        return (int) get_queried_object_id();
+    }
+
+    if (is_singular('issue')) {
+        $series_id = (int) get_post_meta(get_queried_object_id(), 'dracka_series_id', true);
+        return $series_id > 0 ? $series_id : 0;
+    }
+
+    return 0;
+}
+
+/**
+ * Returns the age-gate configuration for the given series, or null when no gate is required.
+ *
+ * @param int $series_id Series post ID.
+ * @return array{series_id:int,rating:string,gate_title:string,gate_body:string}|null
+ */
+function dracka_get_series_gate_config(int $series_id): ?array
+{
+    if ($series_id <= 0) {
+        return null;
+    }
+
+    $rating = (string) get_post_meta($series_id, DRACKA_SERIES_RATING_META_KEY, true);
+
+    if (!in_array($rating, ['16', '18'], true)) {
+        return null;
+    }
+
+    $gate_title = (string) get_post_meta($series_id, DRACKA_SERIES_GATE_TITLE_META_KEY, true);
+    $gate_body  = (string) get_post_meta($series_id, DRACKA_SERIES_GATE_BODY_META_KEY, true);
+
+    if ($gate_title === '') {
+        $gate_title = $rating === '18'
+            ? 'Are you over 18?'
+            : 'Are you over 16?';
+    }
+
+    if ($gate_body === '') {
+        $gate_body = $rating === '18'
+            ? 'This series contains mature content intended for readers aged 18 and above. You must be 18 or older to continue.'
+            : 'This series contains mature content intended for readers aged 16 and above. You must be 16 or older to continue.';
+    }
+
+    return [
+        'series_id'  => $series_id,
+        'rating'     => $rating,
+        'gate_title' => $gate_title,
+        'gate_body'  => $gate_body,
+    ];
+}
+
+/**
+ * Outputs the age-gate overlay markup for a guarded series page.
+ *
+ * Emits nothing when no gate is required for the current page.
+ *
+ * @return void
+ */
+function dracka_render_age_gate(): void
+{
+    $series_id = dracka_get_gate_series_id();
+    $config    = dracka_get_series_gate_config($series_id);
+
+    if ($config === null) {
+        return;
+    }
+
+    $home_url   = esc_url(home_url('/'));
+    $series_id  = (int) $config['series_id'];
+    $rating     = esc_attr($config['rating']);
+    $gate_title = esc_html($config['gate_title']);
+    $gate_body  = esc_html($config['gate_body']);
+    ?>
+    <div
+        class="age-gate"
+        id="dracka-age-gate"
+        data-series-id="<?php echo $series_id; ?>"
+        data-rating="<?php echo $rating; ?>"
+        data-home-url="<?php echo $home_url; ?>"
+        aria-modal="true"
+        role="dialog"
+        aria-labelledby="age-gate-title"
+        aria-describedby="age-gate-body"
+    >
+        <div class="age-gate__panel">
+            <div class="age-gate__rating-badge" aria-hidden="true">+<?php echo $rating; ?></div>
+            <h2 class="age-gate__title" id="age-gate-title"><?php echo $gate_title; ?></h2>
+            <p class="age-gate__body" id="age-gate-body"><?php echo $gate_body; ?></p>
+            <div class="age-gate__actions">
+                <button class="age-gate__btn age-gate__btn--confirm" type="button" id="dracka-age-gate-confirm">
+                    Yes, I&rsquo;m over <?php echo $rating; ?>
+                </button>
+                <a class="age-gate__btn age-gate__btn--decline" href="<?php echo $home_url; ?>">
+                    No, take me back
+                </a>
+            </div>
+        </div>
+        <div class="age-gate__backdrop" aria-hidden="true"></div>
+    </div>
+    <?php
+}
+
 /**
  * Renders splash selector above title in classic series editor.
  *
@@ -1753,9 +2152,16 @@ function dracka_render_series_details_metabox($post)
 {
     wp_nonce_field('dracka_save_series_details', 'dracka_series_details_nonce');
 
-    $series_author = (string) get_post_meta($post->ID, DRACKA_SERIES_AUTHOR_META_KEY, true);
-    $publication_year = (string) get_post_meta($post->ID, DRACKA_SERIES_YEAR_META_KEY, true);
+    $series_author      = (string) get_post_meta($post->ID, DRACKA_SERIES_AUTHOR_META_KEY, true);
+    $publication_year   = (string) get_post_meta($post->ID, DRACKA_SERIES_YEAR_META_KEY, true);
     $series_description = (string) get_post_meta($post->ID, DRACKA_SERIES_DESCRIPTION_META_KEY, true);
+    $series_rating      = (string) get_post_meta($post->ID, DRACKA_SERIES_RATING_META_KEY, true);
+    $gate_title         = (string) get_post_meta($post->ID, DRACKA_SERIES_GATE_TITLE_META_KEY, true);
+    $gate_body          = (string) get_post_meta($post->ID, DRACKA_SERIES_GATE_BODY_META_KEY, true);
+
+    if (!in_array($series_rating, ['everyone', '16', '18'], true)) {
+        $series_rating = 'everyone';
+    }
 
     echo '<p>';
     echo '<label for="dracka_series_author" style="display:block;margin-bottom:4px"><strong>Series Author</strong></label>';
@@ -1771,6 +2177,44 @@ function dracka_render_series_details_metabox($post)
     echo '<label for="dracka_series_description" style="display:block;margin-bottom:4px"><strong>Description</strong></label>';
     echo '<textarea id="dracka_series_description" name="dracka_series_description" rows="6" style="width:100%" placeholder="Series description, plot, lore...">' . esc_textarea($series_description) . '</textarea>';
     echo '</p>';
+
+    echo '<hr style="margin:16px 0">';
+
+    echo '<p>';
+    echo '<label for="dracka_series_rating" style="display:block;margin-bottom:4px"><strong>Audience Rating</strong></label>';
+    echo '<select id="dracka_series_rating" name="dracka_series_rating" style="width:100%">';
+    echo '<option value="everyone"' . selected($series_rating, 'everyone', false) . '>Everyone (E)</option>';
+    echo '<option value="16"'       . selected($series_rating, '16',       false) . '>+16</option>';
+    echo '<option value="18"'       . selected($series_rating, '18',       false) . '>+18</option>';
+    echo '</select>';
+    echo '</p>';
+
+    $gate_fields_style = in_array($series_rating, ['16', '18'], true) ? '' : 'display:none';
+
+    echo '<div id="dracka_series_gate_fields" style="' . esc_attr($gate_fields_style) . '">';
+
+    echo '<p>';
+    echo '<label for="dracka_series_gate_title" style="display:block;margin-bottom:4px"><strong>Age Gate — Headline</strong></label>';
+    echo '<input type="text" id="dracka_series_gate_title" name="dracka_series_gate_title" value="' . esc_attr($gate_title) . '" style="width:100%" placeholder="e.g. Are you over 16?">';
+    echo '</p>';
+
+    echo '<p>';
+    echo '<label for="dracka_series_gate_body" style="display:block;margin-bottom:4px"><strong>Age Gate — Body</strong></label>';
+    echo '<textarea id="dracka_series_gate_body" name="dracka_series_gate_body" rows="4" style="width:100%" placeholder="e.g. This series contains mature content intended for readers aged 16 and above.">' . esc_textarea($gate_body) . '</textarea>';
+    echo '</p>';
+
+    echo '</div>';
+
+    echo '<script type="text/javascript">';
+    echo 'document.addEventListener("DOMContentLoaded", function() {';
+    echo 'var ratingSelect = document.getElementById("dracka_series_rating");';
+    echo 'var gateFields   = document.getElementById("dracka_series_gate_fields");';
+    echo 'if (!ratingSelect || !gateFields) { return; }';
+    echo 'ratingSelect.addEventListener("change", function() {';
+    echo '  gateFields.style.display = (ratingSelect.value === "16" || ratingSelect.value === "18") ? "" : "none";';
+    echo '});';
+    echo '});';
+    echo '</script>';
 }
 
 /**
@@ -2092,19 +2536,82 @@ function dracka_render_series_metabox($post)
         $default_issue_number = (string) dracka_get_next_available_series_issue_number($current_series, (int) $post->ID);
     }
 
+    // Batch-load next available issue numbers for all listed series in one query
+    // to avoid an N+1 pattern (one dracka_get_next_available_series_issue_number()
+    // call per series option).
+    global $wpdb;
+    $all_series_ids = array_values(array_filter(array_map('intval', wp_list_pluck($series_posts, 'ID'))));
+    $next_issue_map = [];
+
+    if (!empty($all_series_ids)) {
+        $placeholders = implode(', ', array_fill(0, count($all_series_ids), '%d'));
+        $query_args   = array_merge(
+            [DRACKA_ISSUE_NUMBER_META_KEY, 'issue', (int) $post->ID],
+            $all_series_ids
+        );
+        $batch_sql = $wpdb->prepare(
+            "SELECT CAST(pm_s.meta_value AS UNSIGNED) AS series_id,
+                    CAST(pm_n.meta_value AS UNSIGNED) AS issue_number
+             FROM {$wpdb->posts} p
+             INNER JOIN {$wpdb->postmeta} pm_s
+                     ON pm_s.post_id = p.ID AND pm_s.meta_key = 'dracka_series_id'
+             INNER JOIN {$wpdb->postmeta} pm_n
+                     ON pm_n.post_id = p.ID AND pm_n.meta_key = %s
+             WHERE p.post_type = %s
+               AND p.post_status NOT IN ('trash', 'auto-draft')
+               AND p.ID != %d
+               AND CAST(pm_s.meta_value AS UNSIGNED) IN ($placeholders)
+               AND CAST(pm_n.meta_value AS UNSIGNED) > 0",
+            $query_args
+        );
+
+        $series_numbers = array_fill_keys($all_series_ids, []);
+
+        if (is_string($batch_sql)) {
+            $rows = $wpdb->get_results($batch_sql, ARRAY_A);
+
+            if (is_array($rows)) {
+                foreach ($rows as $row) {
+                    $s_id = (int) ($row['series_id'] ?? 0);
+                    $num  = (int) ($row['issue_number'] ?? 0);
+
+                    if ($num > 0 && array_key_exists($s_id, $series_numbers)) {
+                        $series_numbers[$s_id][] = $num;
+                    }
+                }
+            }
+        }
+
+        foreach ($all_series_ids as $sid) {
+            $numbers   = $series_numbers[$sid];
+            sort($numbers, SORT_NUMERIC);
+            $candidate = 1;
+
+            foreach ($numbers as $taken) {
+                if ($taken === $candidate) {
+                    $candidate++;
+                } elseif ($taken > $candidate) {
+                    break;
+                }
+            }
+
+            $next_issue_map[$sid] = $candidate;
+        }
+    }
+
     echo '<select name="dracka_series_id" style="width:100%">';
     echo '<option value="">No series (standalone)</option>';
     foreach ($series_posts as $series) {
-        $status_object = get_post_status_object($series->post_status);
-        $status_label = $status_object ? $status_object->label : ucfirst((string) $series->post_status);
+        $status_slug = dracka_normalize_series_status_slug((string) $series->post_status);
+        $status_label = dracka_get_series_status_label((string) $series->post_status);
         $series_option_label = $series->post_title;
 
-        if ($series->post_status !== 'publish') {
+        if ($status_slug !== 'ongoing') {
             $series_option_label .= ' (' . $status_label . ')';
         }
 
         $selected = $current_series === (int) $series->ID ? ' selected' : '';
-        $next_issue_number = dracka_get_next_available_series_issue_number((int) $series->ID, (int) $post->ID);
+        $next_issue_number = $next_issue_map[(int) $series->ID] ?? dracka_get_next_available_series_issue_number((int) $series->ID, (int) $post->ID);
         echo '<option value="' . esc_attr($series->ID) . '" data-next-issue="' . esc_attr($next_issue_number) . '"' . $selected . '>' . esc_html($series_option_label) . '</option>';
     }
     echo '</select>';
@@ -2582,9 +3089,14 @@ function dracka_save_relationship_meta($post_id)
         }
 
         if (isset($_POST['dracka_series_details_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_series_details_nonce'])), 'dracka_save_series_details')) {
-            $author = isset($_POST['dracka_series_author']) ? sanitize_text_field(wp_unslash($_POST['dracka_series_author'])) : '';
+            $author      = isset($_POST['dracka_series_author'])      ? sanitize_text_field(wp_unslash($_POST['dracka_series_author']))      : '';
             $description = isset($_POST['dracka_series_description']) ? sanitize_textarea_field(wp_unslash($_POST['dracka_series_description'])) : '';
-            $year_raw = isset($_POST['dracka_publication_year']) ? trim(wp_unslash($_POST['dracka_publication_year'])) : '';
+            $year_raw    = isset($_POST['dracka_publication_year'])   ? trim(wp_unslash($_POST['dracka_publication_year']))                  : '';
+
+            $rating_raw = isset($_POST['dracka_series_rating']) ? sanitize_key(wp_unslash($_POST['dracka_series_rating'])) : 'everyone';
+            if (!in_array($rating_raw, ['everyone', '16', '18'], true)) {
+                $rating_raw = 'everyone';
+            }
 
             if ($author !== '') {
                 update_post_meta($post_id, DRACKA_SERIES_AUTHOR_META_KEY, $author);
@@ -2602,6 +3114,28 @@ function dracka_save_relationship_meta($post_id)
                 update_post_meta($post_id, DRACKA_SERIES_YEAR_META_KEY, $year_raw);
             } else {
                 delete_post_meta($post_id, DRACKA_SERIES_YEAR_META_KEY);
+            }
+
+            update_post_meta($post_id, DRACKA_SERIES_RATING_META_KEY, $rating_raw);
+
+            if (in_array($rating_raw, ['16', '18'], true)) {
+                $gate_title = isset($_POST['dracka_series_gate_title']) ? sanitize_text_field(wp_unslash($_POST['dracka_series_gate_title'])) : '';
+                $gate_body  = isset($_POST['dracka_series_gate_body'])  ? sanitize_textarea_field(wp_unslash($_POST['dracka_series_gate_body'])) : '';
+
+                if ($gate_title !== '') {
+                    update_post_meta($post_id, DRACKA_SERIES_GATE_TITLE_META_KEY, $gate_title);
+                } else {
+                    delete_post_meta($post_id, DRACKA_SERIES_GATE_TITLE_META_KEY);
+                }
+
+                if ($gate_body !== '') {
+                    update_post_meta($post_id, DRACKA_SERIES_GATE_BODY_META_KEY, $gate_body);
+                } else {
+                    delete_post_meta($post_id, DRACKA_SERIES_GATE_BODY_META_KEY);
+                }
+            } else {
+                delete_post_meta($post_id, DRACKA_SERIES_GATE_TITLE_META_KEY);
+                delete_post_meta($post_id, DRACKA_SERIES_GATE_BODY_META_KEY);
             }
         }
     }
@@ -2655,7 +3189,7 @@ function dracka_enforce_series_issue_number_rules($data, $postarr)
 
     if ($series_id > 0) {
         $series_post = get_post($series_id);
-        $allowed_series_statuses = dracka_get_series_public_statuses();
+        $allowed_series_statuses = dracka_get_series_accepted_statuses();
 
         if (
             !($series_post instanceof WP_Post)
@@ -3408,7 +3942,7 @@ function dracka_adjust_library_query($query)
             $query->set('post_type', 'series');
             $query->set('orderby', 'date');
             $query->set('order', 'DESC');
-            $query->set('post_status', dracka_get_series_public_statuses());
+            $query->set('post_status', dracka_get_series_accepted_statuses());
         }
     }
 

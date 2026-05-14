@@ -12,10 +12,12 @@ $series_issues = isset($issue_navigation['issues']) && is_array($issue_navigatio
 $previous_issue = isset($issue_navigation['previous']) && is_array($issue_navigation['previous']) ? $issue_navigation['previous'] : null;
 $next_issue = isset($issue_navigation['next']) && is_array($issue_navigation['next']) ? $issue_navigation['next'] : null;
 $last_issue = isset($issue_navigation['last']) && is_array($issue_navigation['last']) ? $issue_navigation['last'] : null;
+$first_issue = ($previous_issue !== null && !empty($series_issues)) ? $series_issues[0] : null;
 $has_episode_navigation = !empty($series_issues);
 ?>
 
 <main class="issue-single">
+    <?php dracka_render_age_gate(); ?>
     <?php if (have_posts()) : ?>
         <?php while (have_posts()) : the_post(); ?>
             <article <?php post_class(); ?>>
@@ -58,6 +60,13 @@ $has_episode_navigation = !empty($series_issues);
                 <?php if ($has_episode_navigation) : ?>
                     <section class="issue-episodes-nav dracka-collapsible" data-comments-collapsible>
                         <div class="issue-episodes-nav__bar dracka-collapsible__toggle" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle episodes list">
+                            <?php if ($first_issue) : ?>
+                                <a class="issue-episodes-nav__segment" data-collapsible-ignore-toggle href="<?php echo esc_url((string) $first_issue['url']); ?>">
+                                    <span class="issue-episodes-nav__arrow issue-episodes-nav__arrow--left" aria-hidden="true"></span>
+                                    <span class="issue-episodes-nav__arrow issue-episodes-nav__arrow--left" aria-hidden="true"></span>
+                                    <span>First</span>
+                                </a>
+                            <?php endif; ?>
                             <?php if ($previous_issue) : ?>
                                 <a class="issue-episodes-nav__segment" data-collapsible-ignore-toggle href="<?php echo esc_url((string) $previous_issue['url']); ?>">
                                     <span class="issue-episodes-nav__arrow issue-episodes-nav__arrow--left" aria-hidden="true"></span>

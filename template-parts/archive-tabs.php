@@ -4,19 +4,26 @@
  * Archive Tabs Navigation
  *
  * Renders a tabbed navigation for library/gallery archive views.
+ *
+ * Accepts $args:
+ *   'tabs'       array<string, string>  Slug => label map. Defaults to library tabs.
+ *   'base_url'   string                 URL prefix for tab links. Defaults to '/library/'.
+ *   'active_tab' string                 Currently active tab slug.
+ *   'nav_label'  string                 aria-label for the <nav>. Defaults to 'Archive sections'.
  */
 
-$active_tab = isset($active_tab) ? $active_tab : dracka_get_library_tab();
-$base_url = isset($base_url) ? $base_url : '/library/';
+$active_tab = $args['active_tab'] ?? dracka_get_library_tab();
+$base_url   = $args['base_url']   ?? '/library/';
+$nav_label  = $args['nav_label']  ?? 'Archive sections';
 
-$tabs = [
+$tabs = $args['tabs'] ?? [
     'series'      => 'Series',
     'issues'      => 'Issues',
     'standalones' => 'Standalones',
 ];
 ?>
 
-<nav class="archive-tabs" aria-label="Library sections">
+<nav class="archive-tabs" aria-label="<?php echo esc_attr($nav_label); ?>">
     <?php foreach ($tabs as $tab_slug => $tab_label) : ?>
         <?php
         $tab_classes = 'archive-tab';

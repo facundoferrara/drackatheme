@@ -615,6 +615,64 @@ function setupLatestContentLoader(blockElement) {
   });
 }
 
+/**
+ * Initializes the age-gate modal when the page contains one.
+ *
+ * The modal is rendered server-side only for +16/+18 series.
+ * Acceptance is persisted in localStorage keyed by series ID + rating so that
+ * upgrading a series from +16 to +18 forces a fresh confirmation.
+ */
+function setupAgeGate() {
+  const gate = document.getElementById('dracka-age-gate');
+
+  if (!gate) {
+    return;
+  }
+
+  const seriesId = gate.dataset.seriesId;
+  const rating   = gate.dataset.rating;
+  const homeUrl  = gate.dataset.homeUrl;
+
+  if (!seriesId || !rating) {
+    return;
+  }
+
+  const storageKey = 'dracka_age_accepted_' + seriesId + '_' + rating;
+
+  let accepted = false;
+  try {
+    accepted = localStorage.getItem(storageKey) === '1';
+  } catch (_) {
+    // localStorage unavailable – treat as not accepted
+  }
+
+  if (accepted) {
+    return;
+  }
+
+  // Show the gate and lock scroll
+  gate.classList.add('is-visible');
+  document.body.classList.add('no-scroll');
+
+  const confirmBtn = document.getElementById('dracka-age-gate-confirm');
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      try {
+        localStorage.setItem(storageKey, '1');
+      } catch (_) {
+        // ignore write failure
+      }
+
+      gate.classList.remove('is-visible');
+      document.body.classList.remove('no-scroll');
+    });
+  }
+
+  // Decline links are plain anchors pointing to homeUrl rendered by PHP.
+  // No extra JS wiring needed – browser follows href naturally.
+}
+
 const collapsibleBlocks = document.querySelectorAll('[data-collapsible]');
 
 setupMobilePanels();
@@ -632,3 +690,4 @@ collapsibleBlocks.forEach((blockElement) => {
 });
 
 document.querySelectorAll('[data-comments-collapsible]').forEach(setupCollapsibleBlock);
+setupAgeGate();
