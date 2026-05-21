@@ -2,12 +2,15 @@
 get_header();
 $series_id = get_queried_object_id();
 
+$is_standalone_series  = get_post_meta($series_id, DRACKA_SERIES_IS_STANDALONE_META_KEY, true) === '1';
+$standalone_flipbook_id = (int) get_post_meta($series_id, DRACKA_SERIES_STANDALONE_FLIPBOOK_META_KEY, true);
+
 $issues_page = isset($_GET['issues_page']) ? max(1, absint($_GET['issues_page'])) : 1;
 $issues_sort = isset($_GET['issues_sort']) ? strtolower(sanitize_text_field(wp_unslash($_GET['issues_sort']))) : 'old';
 $issues_sort = $issues_sort === 'new' ? 'new' : 'old';
 $issues_order = $issues_sort === 'old' ? 'ASC' : 'DESC';
 
-$issues = new WP_Query([
+$issues = !$is_standalone_series ? new WP_Query([
     'post_type'      => 'issue',
     'post_status'    => 'publish',
     'posts_per_page' => 20,
@@ -22,7 +25,7 @@ $issues = new WP_Query([
     ],
     'dracka_sort_by_issue_number' => true,
     'dracka_issue_number_direction' => $issues_order,
-]);
+]) : null;
 ?>
 
 <main class="series-single">
@@ -42,8 +45,12 @@ $issues = new WP_Query([
                 $genre_label = implode(', ', array_filter($genre_names));
             }
 
-            $status_slug = dracka_normalize_series_status_slug((string) get_post_status());
-            $status_label = dracka_get_series_status_label($status_slug);
+            $story_status_raw = (string) get_post_meta(get_the_ID(), DRACKA_SERIES_STORY_STATUS_META_KEY, true);
+            if ($story_status_raw === '' || !array_key_exists($story_status_raw, dracka_get_series_custom_statuses())) {
+                $story_status_raw = 'ongoing';
+            }
+            $status_slug  = $story_status_raw;
+            $status_label = dracka_get_series_custom_statuses()[$status_slug];
             $series_premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10);
             ?>
 
@@ -97,67 +104,82 @@ $issues = new WP_Query([
         <?php endwhile; ?>
     <?php endif; ?>
 
-    <section class="series-issues">
-        <div class="series-issues-header">
-            <h2>Released Issues</h2>
-            <?php
-            $toggle_sort = $issues_sort === 'new' ? 'old' : 'new';
-            $toggle_label = $issues_sort === 'new' ? 'Sort: Issue Order (Ascending)' : 'Sort: Issue Order (Descending)';
-            $sort_url = add_query_arg([
-                'issues_sort' => $toggle_sort,
-                'issues_page' => 1,
-            ], get_permalink($series_id));
-            ?>
-            <a class="series-issues-sort" href="<?php echo esc_url($sort_url); ?>"><?php echo esc_html($toggle_label); ?></a>
-        </div>
-
-        <?php if ($issues->have_posts()) : ?>
-            <div class="series-issues-list">
-                <?php while ($issues->have_posts()) : $issues->the_post(); ?>
-                    <?php $issue_premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10); ?>
-                    <article <?php post_class('series-issue-row'); ?>>
-                        <div class="series-issue-row__media">
-                            <?php if ($issue_premiere_badge_markup !== '') : ?>
-                                <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($issue_premiere_badge_markup); ?></div>
-                            <?php endif; ?>
-                            <?php if (has_post_thumbnail()) : ?>
-                                <a href="<?php the_permalink(); ?>" class="series-issue-row__thumb-link" aria-label="<?php echo esc_attr(get_the_title()); ?>">
-                                    <?php the_post_thumbnail('medium'); ?>
-                                </a>
-                            <?php else : ?>
-                                <div class="series-issue-row__thumb-placeholder" aria-hidden="true"></div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="series-issue-row__content">
-                            <div class="series-issue-row__title-wrap">
-                                <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-                                <div class="series-issue-row__views"><?php echo dracka_render_eye_icon(); ?><?php echo wp_kses_post(do_shortcode('[views]')); ?></div>
-                            </div>
-                            <p class="series-issue-row__date"><?php echo esc_html(get_the_date()); ?></p>
-                        </div>
-                    </article>
-                <?php endwhile; ?>
+    <?php if ($is_standalone_series) : ?>
+        <section class="series-standalone-cta">
+            <?php if ($standalone_flipbook_id > 0) : ?>
+                <?php $flipbook_url = get_permalink($standalone_flipbook_id); ?>
+                <?php if ($flipbook_url) : ?>
+                    <a href="<?php echo esc_url($flipbook_url); ?>" class="series-standalone-btn">Go to Comic</a>
+                <?php else : ?>
+                    <p class="series-standalone-cta__notice">Comic not available yet.</p>
+                <?php endif; ?>
+            <?php else : ?>
+                <p class="series-standalone-cta__notice">Comic not available yet.</p>
+            <?php endif; ?>
+        </section>
+    <?php else : ?>
+        <section class="series-issues">
+            <div class="series-issues-header">
+                <h2>Released Issues</h2>
+                <?php
+                $toggle_sort = $issues_sort === 'new' ? 'old' : 'new';
+                $toggle_label = $issues_sort === 'new' ? 'Sort: Issue Order (Ascending)' : 'Sort: Issue Order (Descending)';
+                $sort_url = add_query_arg([
+                    'issues_sort' => $toggle_sort,
+                    'issues_page' => 1,
+                ], get_permalink($series_id));
+                ?>
+                <a class="series-issues-sort" href="<?php echo esc_url($sort_url); ?>"><?php echo esc_html($toggle_label); ?></a>
             </div>
 
-            <?php
-            echo '<div class="pagination">';
-            echo paginate_links([
-                'base'      => esc_url(add_query_arg('issues_page', '%#%')),
-                'format'    => '',
-                'current'   => $issues_page,
-                'total'     => max(1, (int) $issues->max_num_pages),
-                'add_args'  => ['issues_sort' => $issues_sort],
-                'prev_text' => '«',
-                'next_text' => '»',
-            ]);
-            echo '</div>';
-            ?>
-        <?php else : ?>
-            <p>No released issues yet for this series.</p>
-        <?php endif; ?>
+            <?php if ($issues->have_posts()) : ?>
+                <div class="series-issues-list">
+                    <?php while ($issues->have_posts()) : $issues->the_post(); ?>
+                        <?php $issue_premiere_badge_markup = dracka_get_premiere_badge_markup(get_the_ID(), 10); ?>
+                        <article <?php post_class('series-issue-row'); ?>>
+                            <div class="series-issue-row__media">
+                                <?php if ($issue_premiere_badge_markup !== '') : ?>
+                                    <div class="card-badges card-badges--ribbon"><?php echo wp_kses_post($issue_premiere_badge_markup); ?></div>
+                                <?php endif; ?>
+                                <?php if (has_post_thumbnail()) : ?>
+                                    <a href="<?php the_permalink(); ?>" class="series-issue-row__thumb-link" aria-label="<?php echo esc_attr(get_the_title()); ?>">
+                                        <?php the_post_thumbnail('medium'); ?>
+                                    </a>
+                                <?php else : ?>
+                                    <div class="series-issue-row__thumb-placeholder" aria-hidden="true"></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="series-issue-row__content">
+                                <div class="series-issue-row__title-wrap">
+                                    <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+                                    <div class="series-issue-row__views"><?php echo dracka_render_eye_icon(); ?><?php echo wp_kses_post(do_shortcode('[views]')); ?></div>
+                                </div>
+                                <p class="series-issue-row__date"><?php echo esc_html(get_the_date()); ?></p>
+                            </div>
+                        </article>
+                    <?php endwhile; ?>
+                </div>
 
-        <?php wp_reset_postdata(); ?>
-    </section>
+                <?php
+                echo '<div class="pagination">';
+                echo paginate_links([
+                    'base'      => esc_url(add_query_arg('issues_page', '%#%')),
+                    'format'    => '',
+                    'current'   => $issues_page,
+                    'total'     => max(1, (int) $issues->max_num_pages),
+                    'add_args'  => ['issues_sort' => $issues_sort],
+                    'prev_text' => '«',
+                    'next_text' => '»',
+                ]);
+                echo '</div>';
+                ?>
+            <?php else : ?>
+                <p>No released issues yet for this series.</p>
+            <?php endif; ?>
+
+            <?php wp_reset_postdata(); ?>
+        </section>
+    <?php endif; ?>
 </main>
 
 <?php get_template_part('template-parts/comments-box', null, ['initially_open' => false]); ?>

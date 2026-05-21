@@ -304,6 +304,30 @@ main > h1 {
   pointer-events: none;
 }
 
+.card-badges--corner {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  margin: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.badge--standalone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--color-bg) 75%, transparent 25%);
+  border: 1px solid color-mix(in srgb, var(--color-muted) 40%, transparent 60%);
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+
 .content-badge {
   display: inline-flex;
   align-items: center;
@@ -790,15 +814,15 @@ main > h1 {
 }
 
 .series-status--upcoming {
-  color: #60a5fa;
-  background: rgba(96, 165, 250, 0.1);
-  border-color: rgba(96, 165, 250, 0.3);
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.1);
+  border-color: rgba(251, 146, 60, 0.3);
 }
 
 .series-status--hiatus {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.3);
+  color: #9ca3af;
+  background: rgba(156, 163, 175, 0.1);
+  border-color: rgba(156, 163, 175, 0.3);
 }
 
 .series-status--cancelled {
@@ -807,17 +831,36 @@ main > h1 {
   border-color: rgba(248, 113, 113, 0.3);
 }
 
-.series-status--discontinued {
-  color: #fb923c;
-  background: rgba(251, 146, 60, 0.1);
-  border-color: rgba(251, 146, 60, 0.3);
+.series-status--standalone {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.3);
 }
 
 .series-status--finished {
-  color: var(--color-muted);
-  background: rgba(154, 161, 168, 0.1);
-  border-color: rgba(154, 161, 168, 0.3);
+  color: #e879f9;
+  background: rgba(232, 121, 249, 0.1);
+  border-color: rgba(232, 121, 249, 0.3);
 }
+
+/* Admin list badge mirrors the frontend pill */
+.series-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.series-status-badge--ongoing  { color: #4ade80; background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.3); }
+.series-status-badge--upcoming { color: #fb923c; background: rgba(251,146,60,0.12); border-color: rgba(251,146,60,0.3); }
+.series-status-badge--hiatus   { color: #9ca3af; background: rgba(156,163,175,0.12); border-color: rgba(156,163,175,0.3); }
+.series-status-badge--cancelled{ color: #f87171; background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.3); }
+.series-status-badge--standalone{ color: #60a5fa; background: rgba(96,165,250,0.12); border-color: rgba(96,165,250,0.3); }
+.series-status-badge--finished { color: #e879f9; background: rgba(232,121,249,0.12); border-color: rgba(232,121,249,0.3); }
 
 .series-description {
   color: var(--color-text);
@@ -835,6 +878,37 @@ main > h1 {
 
 .series-meta-list p {
   color: var(--color-text);
+}
+
+.series-standalone-cta {
+  margin-top: 2rem;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+.series-standalone-btn {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  border-radius: 0.3rem;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: #fff;
+  background: #60a5fa;
+  border: 2px solid #60a5fa;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.series-standalone-btn:hover,
+.series-standalone-btn:focus {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.series-standalone-cta__notice {
+  color: var(--color-text-muted, #9ca3af);
+  font-size: 0.9rem;
 }
 
 .series-issues {
