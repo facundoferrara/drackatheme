@@ -1537,6 +1537,12 @@ main > h1 {
    LANGUAGE SWITCHER
 ========================= */
 
+/* Kill TranslatePress floating bar — plugin setting unreliable */
+#trp-floatingbar,
+.trp-floatingbar {
+  display: none !important;
+}
+
 .header-left-actions {
   display: flex;
   align-items: center;
@@ -1550,53 +1556,46 @@ main > h1 {
   flex-shrink: 0;
 }
 
-/* Strip TranslatePress list chrome */
+/* Strip TranslatePress list chrome; force-show even if plugin hides it on desktop */
 .header-lang-switcher .trp-language-switcher {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
+  display: flex !important;
   align-items: center;
+  gap: 0.15rem;
 }
 
-/* Hide flags */
-.header-lang-switcher .trp-language-switcher img {
+/* Flags only — hide text labels */
+.header-lang-switcher .trp-language-switcher span {
   display: none;
 }
 
+.header-lang-switcher .trp-language-switcher img {
+  display: block;
+  width: 22px;
+  height: auto;
+  border-radius: 2px;
+}
+
 .header-lang-switcher .trp-language-switcher a {
-  font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-weight: 900;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
-  color: var(--color-text);
-  opacity: 0.45;
+  opacity: 0.35;
   padding: 0.3rem 0.2rem;
-  line-height: 1;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .header-lang-switcher .trp-language-switcher a:hover,
 .header-lang-switcher .trp-language-switcher a:focus-visible {
   opacity: 1;
-  color: var(--color-accent);
 }
 
 /* Active language full opacity */
 .header-lang-switcher .trp-language-switcher .current-language a,
 .header-lang-switcher .trp-language-switcher .trp-current-language a {
   opacity: 1;
-}
-
-/* Divider between items */
-.header-lang-switcher .trp-language-switcher li + li::before {
-  content: '/';
-  color: var(--color-text);
-  opacity: 0.25;
-  font-size: 0.65rem;
-  padding: 0 0.05rem;
 }
 
 .mobile-overlay {
