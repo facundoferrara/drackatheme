@@ -1409,7 +1409,7 @@ main > h1 {
   z-index: 100;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .site-header {
     transition: transform 0.24s ease;
     will-change: transform;
@@ -2002,7 +2002,7 @@ main > h1 {
   }
 
   .header-action--menu {
-    display: inline-flex;
+    display: none;
   }
 
   .main-nav {
@@ -2236,8 +2236,13 @@ main > h1 {
   .series-hero-title {
     font-size: 2rem;
   }
+}
 
-  /* ── Desktop header ─────────────────────────────────────── */
+/* =========================
+   DESKTOP HEADER (>=768px)
+========================= */
+
+@media (min-width: 768px) {
 
   /* Hide mobile-only controls */
   .header-action--info,
@@ -2288,7 +2293,7 @@ main > h1 {
     height: calc(90px - 8px);
   }
 
-  /* Desktop nav shared */
+  /* Desktop nav */
   .desktop-nav {
     display: flex;
     align-items: center;

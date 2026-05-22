@@ -319,7 +319,7 @@ function setupResponsiveHeaderCollapse() {
     return;
   }
 
-  const mobileTabletQuery = window.matchMedia('(max-width: 1023px)');
+  const mobileTabletQuery = window.matchMedia('(max-width: 767px)');
   let lastScrollY = window.scrollY;
   let isCollapsed = false;
 
@@ -685,7 +685,7 @@ function setupDesktopHeaderShrink() {
     return;
   }
 
-  const desktopQuery = window.matchMedia('(min-width: 1024px)');
+  const desktopQuery = window.matchMedia('(min-width: 768px)');
   let isShrunk = false;
 
   const setShrunk = (shouldShrink) => {
