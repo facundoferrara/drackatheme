@@ -16,10 +16,12 @@
                     <div class="footer-cell footer-cell--span">
                         <?php dynamic_sidebar($solo); ?>
                     </div>
-            <?php
+                <?php
                 else :
-                    dynamic_sidebar($left);
-                    dynamic_sidebar($right);
+                ?>
+                    <div class="footer-cell"><?php dynamic_sidebar($left); ?></div>
+                    <div class="footer-cell"><?php dynamic_sidebar($right); ?></div>
+            <?php
                 endif;
             endforeach;
             ?>

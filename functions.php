@@ -73,7 +73,7 @@ function dracka_register_sidebars()
             'name'          => $name,
             'id'            => $id,
             'description'   => sprintf(__('Footer grid cell: %s.', 'dracka'), $name),
-            'before_widget' => '<div class="footer-cell" id="%1$s" aria-label="' . esc_attr($name) . '">',
+            'before_widget' => '<div class="footer-widget" id="%1$s">',
             'after_widget'  => '</div>',
             'before_title'  => '<h2 class="footer-cell__title">',
             'after_title'   => '</h2>',
