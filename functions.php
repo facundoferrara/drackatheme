@@ -59,15 +59,26 @@ add_filter('default_comment_status', function (string $status, string $post_type
  */
 function dracka_register_sidebars()
 {
-    register_sidebar([
-        'name'          => __('Footer Content', 'dracka'),
-        'id'            => 'footer-content',
-        'description'   => __('Editable footer block area.', 'dracka'),
-        'before_widget' => '<div class="footer-widget">',
-        'after_widget'  => '</div>',
-        'before_title'  => '<h2 class="footer-widget-title">',
-        'after_title'   => '</h2>',
-    ]);
+    $footer_areas = [
+        'footer-top-left'     => __('Footer: Top Left', 'dracka'),
+        'footer-top-right'    => __('Footer: Top Right', 'dracka'),
+        'footer-center-left'  => __('Footer: Center Left', 'dracka'),
+        'footer-center-right' => __('Footer: Center Right', 'dracka'),
+        'footer-bottom-left'  => __('Footer: Bottom Left', 'dracka'),
+        'footer-bottom-right' => __('Footer: Bottom Right', 'dracka'),
+    ];
+
+    foreach ($footer_areas as $id => $name) {
+        register_sidebar([
+            'name'          => $name,
+            'id'            => $id,
+            'description'   => sprintf(__('Footer grid cell: %s.', 'dracka'), $name),
+            'before_widget' => '<div class="footer-cell" id="%1$s" aria-label="' . esc_attr($name) . '">',
+            'after_widget'  => '</div>',
+            'before_title'  => '<h2 class="footer-cell__title">',
+            'after_title'   => '</h2>',
+        ]);
+    }
 }
 add_action('widgets_init', 'dracka_register_sidebars');
 
@@ -4491,6 +4502,30 @@ function dracka_social_icons($item_output, $item, $depth, $args)
     return '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer" class="menu-link">' . $icon . '</a>';
 }
 add_filter('walker_nav_menu_start_el', 'dracka_social_icons', 10, 4);
+
+/**
+ * Shortcode [dracka_social_links] — renders the Social Menu nav with SVG icons.
+ *
+ * Usage: add a Shortcode widget to any footer cell and enter [dracka_social_links].
+ *
+ * @return string
+ */
+function dracka_social_links_shortcode()
+{
+    if (!has_nav_menu('social')) {
+        return '';
+    }
+
+    return wp_nav_menu([
+        'theme_location' => 'social',
+        'container'      => 'nav',
+        'container_class' => 'social-links',
+        'container_attr' => ['aria-label' => __('Social links', 'dracka')],
+        'menu_class'     => 'social-menu',
+        'echo'           => false,
+    ]);
+}
+add_shortcode('dracka_social_links', 'dracka_social_links_shortcode');
 
 require get_template_directory() . '/inc/svg-icons.php';
 require get_template_directory() . '/inc/theme-settings.php';

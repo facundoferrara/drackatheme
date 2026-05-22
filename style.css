@@ -121,8 +121,34 @@ main {
   padding: 1rem;
 }
 
-.site-footer__fallback {
-  color: var(--color-muted);
+.site-footer__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.footer-cell {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.footer-cell--span {
+  grid-column: 1 / -1;
+}
+
+.footer-cell__title {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+@media (min-width: 1024px) {
+  .site-footer__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .footer-cell--span {
+    grid-column: span 2;
+  }
 }
 
 /* ── 404 page ───────────────────────────────────────────────── */
@@ -163,25 +189,6 @@ main {
   text-decoration: underline;
 }
 /* ─────────────────────────────────────────────────────────── */
-
-.site-footer__social {
-  margin-top: 1rem;
-}
-
-.site-footer__social .social-menu {
-  margin: 0;
-  padding: 0;
-}
-
-.site-footer .footer-widget {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.site-footer .footer-widget-title {
-  font-size: 1rem;
-  font-weight: 800;
-}
 
 main > h1 {
   text-align: center;
