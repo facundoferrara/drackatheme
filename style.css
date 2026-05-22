@@ -1756,7 +1756,8 @@ main > h1 {
 }
 
 /* Nav oculto en mobile */
-.main-nav {
+.main-nav,
+.desktop-nav {
   display: none;
   margin-top: 1rem;
 }
@@ -2234,6 +2235,109 @@ main > h1 {
 
   .series-hero-title {
     font-size: 2rem;
+  }
+
+  /* ── Desktop header ─────────────────────────────────────── */
+
+  /* Hide mobile-only controls */
+  .header-action--info,
+  .header-action--menu {
+    display: none;
+  }
+
+  /* Switch header-inner to a 3-column grid: nav | logo | nav */
+  .header-inner {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 0 2.5rem;
+    min-height: 160px;
+    transition: min-height 0.35s ease;
+  }
+
+  /* Logo column */
+  .logo {
+    height: 160px;
+    transition: height 0.35s ease;
+  }
+
+  .logo .dracka-animated-logo {
+    height: 160px;
+    transition: height 0.35s ease;
+  }
+
+  .logo .dracka-logo-frame {
+    height: calc(160px - 8px);
+    transition: height 0.35s ease;
+  }
+
+  /* Shrunk state (added by JS on scroll) */
+  .site-header.is-shrunk .header-inner {
+    min-height: 90px;
+  }
+
+  .site-header.is-shrunk .logo {
+    height: 90px;
+  }
+
+  .site-header.is-shrunk .logo .dracka-animated-logo {
+    height: 90px;
+  }
+
+  .site-header.is-shrunk .logo .dracka-logo-frame {
+    height: calc(90px - 8px);
+  }
+
+  /* Desktop nav shared */
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 0;
+  }
+
+  .desktop-nav--left {
+    justify-content: flex-end;
+  }
+
+  .desktop-nav--right {
+    justify-content: flex-start;
+  }
+
+  .desktop-nav a {
+    font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
+    font-weight: 900;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--color-text);
+    display: inline-block;
+    position: relative;
+    transition: color 0.2s ease;
+  }
+
+  .desktop-nav a::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.2s ease;
+  }
+
+  .desktop-nav a:hover,
+  .desktop-nav a:focus-visible {
+    color: var(--color-accent);
+  }
+
+  .desktop-nav a:hover::after,
+  .desktop-nav a:focus-visible::after {
+    transform: scaleX(1);
   }
 }
 

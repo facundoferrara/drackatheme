@@ -22,6 +22,36 @@
           data-panel-target="mobile-info-panel">ℹ</button>
       <?php endif; ?>
       <?php
+      // Desktop nav: split primary menu top-level items across both sides of the logo.
+      // Even-indexed items (0, 2, 4 …) go left (then reversed so item 1 lands closest to logo);
+      // odd-indexed items (1, 3, 5 …) go right.
+      $dracka_desktop_nav_left  = [];
+      $dracka_desktop_nav_right = [];
+      $dracka_menu_locations    = get_nav_menu_locations();
+      if (! empty($dracka_menu_locations['primary'])) {
+        $dracka_all_items  = wp_get_nav_menu_items($dracka_menu_locations['primary']);
+        $dracka_top_level  = is_array($dracka_all_items)
+          ? array_values(array_filter($dracka_all_items, fn($item) => (int) $item->menu_item_parent === 0))
+          : [];
+        foreach ($dracka_top_level as $dracka_i => $dracka_nav_item) {
+          if ($dracka_i % 2 === 0) {
+            $dracka_desktop_nav_left[] = $dracka_nav_item;
+          } else {
+            $dracka_desktop_nav_right[] = $dracka_nav_item;
+          }
+        }
+        $dracka_desktop_nav_left = array_reverse($dracka_desktop_nav_left);
+      }
+      ?>
+
+      <nav class="desktop-nav desktop-nav--left" aria-label="Primary navigation left">
+        <?php foreach ($dracka_desktop_nav_left as $dracka_nav_item) : ?>
+          <a href="<?php echo esc_url($dracka_nav_item->url); ?>"
+            <?php if (! empty($dracka_nav_item->current)) : ?>aria-current="page" <?php endif; ?>><?php echo esc_html($dracka_nav_item->title); ?></a>
+        <?php endforeach; ?>
+      </nav>
+
+      <?php
       $dracka_logo_data = dracka_get_active_logo_animation_data();
       $dracka_site_name = get_bloginfo('name');
       ?>
@@ -44,6 +74,14 @@
           <a href="<?php echo esc_url(home_url('/')); ?>"><?php echo esc_html($dracka_site_name); ?></a>
         <?php endif; ?>
       </div>
+
+      <nav class="desktop-nav desktop-nav--right" aria-label="Primary navigation right">
+        <?php foreach ($dracka_desktop_nav_right as $dracka_nav_item) : ?>
+          <a href="<?php echo esc_url($dracka_nav_item->url); ?>"
+            <?php if (! empty($dracka_nav_item->current)) : ?>aria-current="page" <?php endif; ?>><?php echo esc_html($dracka_nav_item->title); ?></a>
+        <?php endforeach; ?>
+      </nav>
+
       <button
         class="header-action header-action--menu hamburger"
         type="button"

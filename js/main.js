@@ -673,11 +673,68 @@ function setupAgeGate() {
   // No extra JS wiring needed – browser follows href naturally.
 }
 
+/**
+ * Shrinks the desktop header from 160px to 90px after the user scrolls
+ * past 80px, and restores it when they scroll back above 40px.
+ * Only active at >=1024px; safely ignored on mobile/tablet.
+ */
+function setupDesktopHeaderShrink() {
+  const headerElement = document.querySelector('.site-header');
+
+  if (!headerElement) {
+    return;
+  }
+
+  const desktopQuery = window.matchMedia('(min-width: 1024px)');
+  let isShrunk = false;
+
+  const setShrunk = (shouldShrink) => {
+    if (isShrunk === shouldShrink) {
+      return;
+    }
+
+    isShrunk = shouldShrink;
+    headerElement.classList.toggle('is-shrunk', shouldShrink);
+  };
+
+  const updateShrinkState = () => {
+    if (!desktopQuery.matches) {
+      setShrunk(false);
+      return;
+    }
+
+    // Don't fight scroll-lock while a mobile overlay is open.
+    if (document.body.classList.contains('no-scroll')) {
+      return;
+    }
+
+    const scrollY = window.scrollY;
+
+    if (scrollY > 80) {
+      setShrunk(true);
+    } else if (scrollY < 40) {
+      setShrunk(false);
+    }
+  };
+
+  window.addEventListener('scroll', updateShrinkState, { passive: true });
+  window.addEventListener('resize', updateShrinkState);
+
+  if (typeof desktopQuery.addEventListener === 'function') {
+    desktopQuery.addEventListener('change', updateShrinkState);
+  } else if (typeof desktopQuery.addListener === 'function') {
+    desktopQuery.addListener(updateShrinkState);
+  }
+
+  updateShrinkState();
+}
+
 const collapsibleBlocks = document.querySelectorAll('[data-collapsible]');
 
 setupMobilePanels();
 setupAnimatedLogo();
 setupResponsiveHeaderCollapse();
+setupDesktopHeaderShrink();
 
 collapsibleBlocks.forEach((blockElement) => {
   if (!blockHasRenderableCards(blockElement)) {
