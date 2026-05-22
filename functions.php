@@ -831,7 +831,7 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
     $has_more = $next_offset < $effective_cap;
     $reached_cap = !$has_more && $total_published > $effective_cap;
     $content_id = wp_unique_id('dracka-latest-' . $rest_slug . '-content-');
-    $initially_open = $is_newsletter;
+    $initially_open = true;
 
     if ($is_newsletter) {
         $see_all_markup = sprintf(
