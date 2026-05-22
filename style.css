@@ -1533,6 +1533,72 @@ main > h1 {
   margin-left: auto;
 }
 
+/* =========================
+   LANGUAGE SWITCHER
+========================= */
+
+.header-left-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}
+
+.header-lang-switcher {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Strip TranslatePress list chrome */
+.header-lang-switcher .trp-language-switcher {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Hide flags */
+.header-lang-switcher .trp-language-switcher img {
+  display: none;
+}
+
+.header-lang-switcher .trp-language-switcher a {
+  font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-weight: 900;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--color-text);
+  opacity: 0.45;
+  padding: 0.3rem 0.2rem;
+  line-height: 1;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.header-lang-switcher .trp-language-switcher a:hover,
+.header-lang-switcher .trp-language-switcher a:focus-visible {
+  opacity: 1;
+  color: var(--color-accent);
+}
+
+/* Active language full opacity */
+.header-lang-switcher .trp-language-switcher .current-language a,
+.header-lang-switcher .trp-language-switcher .trp-current-language a {
+  opacity: 1;
+}
+
+/* Divider between items */
+.header-lang-switcher .trp-language-switcher li + li::before {
+  content: '/';
+  color: var(--color-text);
+  opacity: 0.25;
+  font-size: 0.65rem;
+  padding: 0 0.05rem;
+}
+
 .mobile-overlay {
   position: fixed;
   inset: 0;
@@ -1830,15 +1896,25 @@ main > h1 {
 
   .header-inner {
     display: grid;
-    grid-template-columns: 2.5rem 1fr 2.5rem;
+    grid-template-columns: 1fr auto 1fr;
     gap: 0.5rem;
     min-height: var(--header-height);
     height: var(--header-height);
     padding: 0 0.75rem;
   }
 
+  .header-left-actions {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.25rem;
+  }
+
   .logo {
     grid-column: 2;
+    grid-row: 1;
     height: 100%;
     display: flex;
     align-items: center;
@@ -1853,12 +1929,9 @@ main > h1 {
     justify-content: center;
   }
 
-  .header-action--info {
-    grid-column: 1;
-  }
-
   .header-action--menu {
     grid-column: 3;
+    grid-row: 1;
     justify-self: end;
     margin-left: 0;
   }
@@ -2448,6 +2521,32 @@ main > h1 {
     padding: 0 2.5rem;
     min-height: 160px;
     transition: min-height 0.35s ease;
+  }
+
+  /* Explicit grid placement — required because .header-left-actions is now
+     the first DOM child and would otherwise displace auto-placed items */
+  .header-left-actions {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    align-self: center;
+    gap: 0.75rem;
+  }
+
+  .desktop-nav--left {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .logo {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .desktop-nav--right {
+    grid-column: 3;
+    grid-row: 1;
   }
 
   /* Logo column */

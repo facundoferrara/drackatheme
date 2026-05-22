@@ -12,15 +12,20 @@
 
   <header class="site-header">
     <div class="header-inner">
-      <?php if (dracka_info_panel_has_content()) : ?>
-        <button
-          class="header-action header-action--info"
-          type="button"
-          aria-label="Open info panel"
-          aria-expanded="false"
-          aria-controls="mobile-info-panel"
-          data-panel-target="mobile-info-panel">ℹ</button>
-      <?php endif; ?>
+      <div class="header-left-actions">
+        <div class="header-lang-switcher">
+          <?php echo do_shortcode('[language-switcher]'); ?>
+        </div>
+        <?php if (dracka_info_panel_has_content()) : ?>
+          <button
+            class="header-action header-action--info"
+            type="button"
+            aria-label="Open info panel"
+            aria-expanded="false"
+            aria-controls="mobile-info-panel"
+            data-panel-target="mobile-info-panel">ℹ</button>
+        <?php endif; ?>
+      </div>
       <?php
       // Desktop nav: split primary menu top-level items across both sides of the logo.
       // Even-indexed items (0, 2, 4 …) go left (then reversed so item 1 lands closest to logo);
