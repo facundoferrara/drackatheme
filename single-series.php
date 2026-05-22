@@ -1,5 +1,4 @@
 <?php
-get_header();
 $series_id = get_queried_object_id();
 
 $is_standalone_series  = get_post_meta($series_id, DRACKA_SERIES_IS_STANDALONE_META_KEY, true) === '1';
@@ -9,6 +8,24 @@ $issues_page = isset($_GET['issues_page']) ? max(1, absint($_GET['issues_page'])
 $issues_sort = isset($_GET['issues_sort']) ? strtolower(sanitize_text_field(wp_unslash($_GET['issues_sort']))) : 'old';
 $issues_sort = $issues_sort === 'new' ? 'new' : 'old';
 $issues_order = $issues_sort === 'old' ? 'ASC' : 'DESC';
+
+// Emit a canonical URL so search engines see one clean URL per page/sort state.
+// Only include params that differ from defaults (page 1, ascending order).
+add_action('wp_head', static function () use ($series_id, $issues_page, $issues_sort) {
+    $args = [];
+    if ($issues_page > 1) {
+        $args['issues_page'] = $issues_page;
+    }
+    if ($issues_sort !== 'old') {
+        $args['issues_sort'] = $issues_sort;
+    }
+    $canonical = empty($args)
+        ? get_permalink($series_id)
+        : add_query_arg($args, get_permalink($series_id));
+    echo '<link rel="canonical" href="' . esc_url($canonical) . '">' . "\n";
+}, 1);
+
+get_header();
 
 $issues = !$is_standalone_series ? new WP_Query([
     'post_type'      => 'issue',

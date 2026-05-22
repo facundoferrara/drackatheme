@@ -116,9 +116,9 @@ main {
 
 .site-footer__inner {
   width: 100%;
-  max-width: 1100px;
+  max-width: clamp(1024px, 53.33vw, 1600px);
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1rem 2rem;
 }
 
 .site-footer__grid {
@@ -1929,7 +1929,7 @@ main > h1 {
 
 .post-single {
   max-width: 72ch;
-  margin: 2rem auto;
+  margin: 1rem auto;
   padding: 0 1rem;
 }
 
@@ -2237,22 +2237,27 @@ main > h1 {
 ========================= */
 
 @media (min-width: 1024px) {
+  main {
+    max-width: clamp(1024px, 53.33vw, 1600px);
+    padding: 0 2rem;
+  }
+
   .library-grid,
   .issue-grid {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .album-grid,
   .artwork-grid {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .dracka-issues-grid {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .dracka-artwork-grid {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .series-hero-cover {
