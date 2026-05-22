@@ -1924,6 +1924,20 @@ main > h1 {
 }
 
 /* =========================
+   NEWSLETTER PAGE
+========================= */
+
+.newsletter-page {
+  max-width: 72ch;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.newsletter-form {
+  margin-top: 1.5rem;
+}
+
+/* =========================
    BLOG POST SINGLE
 ========================= */
 
