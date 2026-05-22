@@ -4527,6 +4527,38 @@ function dracka_social_links_shortcode()
 }
 add_shortcode('dracka_social_links', 'dracka_social_links_shortcode');
 
+/**
+ * Shortcode [button url="..." target="..."] — renders a theme-styled CTA button.
+ *
+ * Attributes:
+ *   url    (required) Link href.
+ *   target (optional) Link target, e.g. "_blank". Defaults to empty (same tab).
+ *
+ * Usage: [button url="https://patreon.com/example" target="_blank"]Support us on Patreon[/button]
+ *
+ * @param array  $atts    Shortcode attributes.
+ * @param string $content Button label text.
+ * @return string
+ */
+function dracka_button_shortcode($atts, $content = '')
+{
+    $atts = shortcode_atts(
+        [
+            'url'    => '#',
+            'target' => '',
+        ],
+        $atts,
+        'button'
+    );
+
+    $target = $atts['target'] ? ' target="' . esc_attr($atts['target']) . '"' : '';
+    $rel    = $atts['target'] === '_blank' ? ' rel="noopener noreferrer"' : '';
+    $label  = $content ? wp_kses_post($content) : __('Learn more', 'dracka');
+
+    return '<a href="' . esc_url($atts['url']) . '" class="btn"' . $target . $rel . '>' . $label . '</a>';
+}
+add_shortcode('button', 'dracka_button_shortcode');
+
 require get_template_directory() . '/inc/svg-icons.php';
 require get_template_directory() . '/inc/theme-settings.php';
 

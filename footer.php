@@ -12,11 +12,11 @@
                 $has_right = is_active_sidebar($right);
                 if ($has_left xor $has_right) :
                     $solo = $has_left ? $left : $right;
-                    ?>
+            ?>
                     <div class="footer-cell footer-cell--span">
                         <?php dynamic_sidebar($solo); ?>
                     </div>
-                    <?php
+            <?php
                 else :
                     dynamic_sidebar($left);
                     dynamic_sidebar($right);
