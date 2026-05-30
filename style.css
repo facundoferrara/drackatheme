@@ -2421,8 +2421,8 @@ main > h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 60px;
+  height: 60px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -2448,8 +2448,8 @@ main > h1 {
 }
 
 .artwork-nav__arrow svg {
-  width: 28px;
-  height: 28px;
+  width: 38px;
+  height: 38px;
   fill: currentColor;
   display: block;
 }
@@ -2465,8 +2465,8 @@ main > h1 {
     top: 50%;
     transform: translateY(-50%);
     background: rgba(0, 0, 0, 0.45);
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     opacity: 0.85;
     z-index: 3;
   }

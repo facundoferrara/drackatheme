@@ -124,6 +124,14 @@
       return;
     }
 
+    // Kick off the REST prefetch immediately so it can complete during the
+    // ~650ms animation. finishTransition will find the result in the cache.
+    if (!cache.has(target.id)) {
+      fetchNavData(target.id, function (fetched) {
+        if (fetched) cache.set(target.id, fetched);
+      });
+    }
+
     // 1. Start exit animation.
     var exitClass   = direction === 'next' ? 'is-exiting-left' : 'is-exiting-right';
     var enterClass  = direction === 'next' ? 'is-entering-from-right' : 'is-entering-from-left';
