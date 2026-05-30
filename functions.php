@@ -181,11 +181,11 @@ function dracka_register_blocks()
                 ],
                 'initialCount' => [
                     'type'    => 'number',
-                    'default' => 8,
+                    'default' => 12,
                 ],
                 'increment' => [
                     'type'    => 'number',
-                    'default' => 8,
+                    'default' => 12,
                 ],
                 'showMoreLabel' => [
                     'type'    => 'string',
@@ -793,13 +793,13 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
     }
 
     $title = isset($attributes['title']) ? sanitize_text_field($attributes['title']) : $defaults['title'];
-    $initial_count = isset($attributes['initialCount']) ? max(1, (int) $attributes['initialCount']) : 8;
+    $initial_count = isset($attributes['initialCount']) ? max(1, (int) $attributes['initialCount']) : 12;
 
     if ($is_newsletter) {
         $initial_count = min($initial_count, 3);
     }
 
-    $increment = isset($attributes['increment']) ? max(1, (int) $attributes['increment']) : 8;
+    $increment = isset($attributes['increment']) ? max(1, (int) $attributes['increment']) : 12;
     $show_more_label = isset($attributes['showMoreLabel']) ? sanitize_text_field($attributes['showMoreLabel']) : 'Show more';
     $max_items_cap = isset($attributes['maxItemsCap']) ? max(0, (int) $attributes['maxItemsCap']) : 0;
     $sort_mode = isset($attributes['sortMode']) ? dracka_normalize_latest_sort_mode($attributes['sortMode']) : 'newest';
@@ -1040,7 +1040,7 @@ function dracka_render_news_ticker_block($attributes)
     $separator = '<span class="dracka-news-ticker__separator" aria-hidden="true">&bull;</span>';
     $base_ticker_line = implode($separator, $ticker_items);
     $repeat_count = max(2, (int) ceil(8 / max(1, count($ticker_items))));
-    $ticker_line = implode($separator, array_fill(0, $repeat_count, $base_ticker_line));
+    $ticker_line = implode($separator, array_fill(0, $repeat_count, $base_ticker_line)) . $separator;
     $ticker_line = wp_kses($ticker_line, $allowed_html);
 
     ob_start();
@@ -1073,7 +1073,7 @@ function dracka_register_rest_routes()
         ],
         'limit' => [
             'sanitize_callback' => 'absint',
-            'default'           => 8,
+            'default'           => 12,
         ],
         'max' => [
             'sanitize_callback' => 'absint',

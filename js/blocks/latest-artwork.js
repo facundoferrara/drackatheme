@@ -25,11 +25,11 @@
       },
       initialCount: {
         type: 'number',
-        default: 8,
+        default: 12,
       },
       increment: {
         type: 'number',
-        default: 8,
+        default: 12,
       },
       showMoreLabel: {
         type: 'string',

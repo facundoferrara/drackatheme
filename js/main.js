@@ -522,7 +522,7 @@ function setupLatestContentLoader(blockElement) {
   const showMoreButton = blockElement.querySelector('[data-show-more]');
   const grid = blockElement.querySelector('[data-content-grid]');
   const loadUrl = blockElement.dataset.loadUrl;
-  const increment = Number.parseInt(blockElement.dataset.increment || '8', 10);
+  const increment = Number.parseInt(blockElement.dataset.increment || '12', 10);
   const maxItemsCap = Number.parseInt(blockElement.dataset.maxItemsCap || '0', 10);
   const sortMode = blockElement.dataset.sortMode || 'newest';
   const showMoreLabel = blockElement.dataset.showMoreLabel || 'Show more';
