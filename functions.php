@@ -1185,6 +1185,40 @@ function dracka_register_rest_routes()
             ],
         ],
     ]);
+
+    register_rest_route('dracka/v1', '/artwork-comments/(?P<id>[\d]+)', [
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => function (WP_REST_Request $request): WP_REST_Response|WP_Error {
+            $id   = (int) $request->get_param('id');
+            $post = get_post($id);
+            if (
+                !($post instanceof WP_Post)
+                || $post->post_type !== 'artwork'
+                || $post->post_status !== 'publish'
+            ) {
+                return new WP_Error('dracka_not_found', 'Artwork not found.', ['status' => 404]);
+            }
+
+            global $post;
+            $post = get_post($id);
+            setup_postdata($post);
+
+            ob_start();
+            get_template_part('template-parts/comments-box', null, ['initially_open' => true]);
+            $html = ob_get_clean();
+
+            wp_reset_postdata();
+
+            return new WP_REST_Response(['html' => $html], 200);
+        },
+        'permission_callback' => '__return_true',
+        'args'                => [
+            'id' => [
+                'sanitize_callback' => 'absint',
+                'validate_callback' => function ($val) { return is_numeric($val) && (int) $val > 0; },
+            ],
+        ],
+    ]);
 }
 add_action('rest_api_init', 'dracka_register_rest_routes');
 

@@ -702,6 +702,20 @@ main > h1 {
   display: none;
 }
 
+.artwork-card__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 2rem 0.55rem 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.25;
+  color: #ffffff;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.86) 100%);
+  pointer-events: none;
+}
+
 .series-issues h2,
 .album-artwork h2 {
   margin-bottom: 1rem;
@@ -2383,8 +2397,13 @@ main > h1 {
   transition: opacity 220ms ease;
 }
 
+.dracka-comments-box {
+  transition: opacity 220ms ease;
+}
+
 .artwork-content.is-fading,
-.artwork-album.is-fading {
+.artwork-album.is-fading,
+.dracka-comments-box.is-fading {
   opacity: 0;
 }
 

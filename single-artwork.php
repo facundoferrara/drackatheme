@@ -25,7 +25,8 @@ $current_image = [
 <?php if ($has_nav) : ?>
 <script id="artwork-nav-data" type="application/json">
 <?php echo wp_json_encode([
-    'restBase'  => esc_url_raw(rest_url('dracka/v1/artwork-nav/')),
+    'restBase'         => esc_url_raw(rest_url('dracka/v1/artwork-nav/')),
+    'commentsRestBase' => esc_url_raw(rest_url('dracka/v1/artwork-comments/')),
     'current'   => [
         'id'      => $artwork_id,
         'url'     => get_permalink($artwork_id),

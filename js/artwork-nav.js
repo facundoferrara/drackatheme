@@ -135,8 +135,9 @@
     var container  = document.querySelector('.artwork-nav');
     var frame      = container ? container.querySelector('.artwork-nav__frame') : null;
     var img        = frame ? frame.querySelector('img.artwork-nav__img') : null;
-    var contentEl  = document.querySelector('.artwork-content');
-    var albumEl    = document.querySelector('.artwork-album');
+    var contentEl   = document.querySelector('.artwork-content');
+    var albumEl     = document.querySelector('.artwork-album');
+    var commentsBox = document.querySelector('.dracka-comments-box');
 
     if (!frame || !img) {
       busy = false;
@@ -144,8 +145,9 @@
     }
 
     // Start fading supplementary text immediately alongside the image exit.
-    if (contentEl) contentEl.classList.add('is-fading');
-    if (albumEl)   albumEl.classList.add('is-fading');
+    if (contentEl)   contentEl.classList.add('is-fading');
+    if (albumEl)     albumEl.classList.add('is-fading');
+    if (commentsBox) commentsBox.classList.add('is-fading');
 
     // Kick off the REST prefetch immediately so it can complete during the
     // ~650ms animation. finishTransition will find the result in the cache.
@@ -255,7 +257,7 @@
    * @param {boolean}             pushHistory
    */
   function applyNavData(current, previous, next, pushHistory) {
-    navData = { restBase: navData ? navData.restBase : '', current: current, previous: previous, next: next };
+    navData = { restBase: navData ? navData.restBase : '', commentsRestBase: navData ? navData.commentsRestBase : '', current: current, previous: previous, next: next };
 
     updateArrows();
     preloadItem(previous);
@@ -282,6 +284,33 @@
         albumEl.setAttribute('hidden', '');
       }
       albumEl.classList.remove('is-fading');
+    }
+
+    // Refresh comments section.
+    var commentsBox = document.querySelector('.dracka-comments-box');
+    if (commentsBox) {
+      fetchCommentsHtml(current.id, function (html) {
+        var box = document.querySelector('.dracka-comments-box');
+        if (!box) return;
+        if (!html) {
+          box.classList.remove('is-fading');
+          return;
+        }
+        var parser     = new DOMParser();
+        var doc        = parser.parseFromString(html, 'text/html');
+        var newSection = doc.querySelector('.dracka-comments-box');
+        if (!newSection) {
+          box.classList.remove('is-fading');
+          return;
+        }
+        newSection.classList.add('is-fading');
+        box.replaceWith(newSection);
+        void newSection.offsetWidth;
+        newSection.classList.remove('is-fading');
+        if (typeof setupCollapsibleBlock === 'function') {
+          setupCollapsibleBlock(newSection);
+        }
+      });
     }
 
     // Update URL.
@@ -437,6 +466,34 @@
         try {
           var data = JSON.parse(xhr.responseText);
           callback({ current: data.current, previous: data.previous, next: data.next });
+        } catch (_) {
+          callback(null);
+        }
+      } else {
+        callback(null);
+      }
+    };
+    xhr.onerror = function () { callback(null); };
+    xhr.send();
+  }
+
+  /**
+   * Fetches the rendered comments-box HTML for a given artwork.
+   *
+   * @param {number}   artworkId
+   * @param {function} callback - Called with the HTML string or null on failure.
+   */
+  function fetchCommentsHtml(artworkId, callback) {
+    if (!navData || !navData.commentsRestBase) return;
+    var url = navData.commentsRestBase + artworkId;
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          callback(data.html || null);
         } catch (_) {
           callback(null);
         }
