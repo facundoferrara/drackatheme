@@ -40,6 +40,10 @@ Version: 0.1
   padding: 0;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
   font-weight: 400;
@@ -1379,7 +1383,7 @@ main > h1 {
   }
 
   to {
-    transform: translateX(calc(-100% / var(--dracka-ticker-copies, 2)));
+    transform: translateX(-50%);
   }
 }
 

@@ -751,8 +751,6 @@ function setupNewsTicker() {
       return;
     }
 
-    let buildRafId = null;
-
     const clearClones = () => {
       trackElement.querySelectorAll('[data-ticker-clone="true"]').forEach((el) => el.remove());
     };
@@ -761,13 +759,6 @@ function setupNewsTicker() {
       tickerElement.classList.remove('is-ready');
       clearClones();
 
-      const baseLineWidth = baseLineElement.getBoundingClientRect().width;
-
-      if (!baseLineWidth) {
-        // Element not yet laid out; fonts.ready or resize will trigger a retry.
-        return;
-      }
-
       if (reduceMotionQuery.matches) {
         viewportElement.style.overflowX = 'auto';
         return;
@@ -775,41 +766,18 @@ function setupNewsTicker() {
 
       viewportElement.style.overflowX = '';
 
-      const viewportWidth = viewportElement.getBoundingClientRect().width;
-      const copies = Math.max(2, Math.ceil((viewportWidth + baseLineWidth) / baseLineWidth));
+      const clone = baseLineElement.cloneNode(true);
+      clone.setAttribute('aria-hidden', 'true');
+      clone.setAttribute('data-ticker-clone', 'true');
+      trackElement.appendChild(clone);
 
-      for (let i = 1; i < copies; i++) {
-        const clone = baseLineElement.cloneNode(true);
-        clone.setAttribute('aria-hidden', 'true');
-        clone.setAttribute('data-ticker-clone', 'true');
-        trackElement.appendChild(clone);
-      }
-
-      tickerElement.style.setProperty('--dracka-ticker-copies', String(copies));
       tickerElement.classList.add('is-ready');
     };
 
-    const queueBuild = () => {
-      if (buildRafId !== null) {
-        return;
-      }
-
-      buildRafId = window.requestAnimationFrame(() => {
-        buildRafId = null;
-        buildTicker();
-      });
-    };
-
-    window.addEventListener('resize', queueBuild, { passive: true });
-
     if (typeof reduceMotionQuery.addEventListener === 'function') {
-      reduceMotionQuery.addEventListener('change', queueBuild);
+      reduceMotionQuery.addEventListener('change', buildTicker);
     } else if (typeof reduceMotionQuery.addListener === 'function') {
-      reduceMotionQuery.addListener(queueBuild);
-    }
-
-    if (document.fonts) {
-      document.fonts.ready.then(queueBuild).catch(() => {});
+      reduceMotionQuery.addListener(buildTicker);
     }
 
     buildTicker();

@@ -1038,7 +1038,9 @@ function dracka_render_news_ticker_block($attributes)
     }
 
     $separator = '<span class="dracka-news-ticker__separator" aria-hidden="true">&bull;</span>';
-    $ticker_line = implode($separator, $ticker_items);
+    $base_ticker_line = implode($separator, $ticker_items);
+    $repeat_count = max(2, (int) ceil(8 / max(1, count($ticker_items))));
+    $ticker_line = implode($separator, array_fill(0, $repeat_count, $base_ticker_line));
     $ticker_line = wp_kses($ticker_line, $allowed_html);
 
     ob_start();
