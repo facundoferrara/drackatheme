@@ -391,7 +391,6 @@
 
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
-    xhr.setRequestHeader('X-WP-Nonce', ''); // public endpoint – no nonce needed
     xhr.onload = function () {
       if (xhr.status === 200) {
         try {
