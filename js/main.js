@@ -685,8 +685,10 @@ function setupDesktopHeaderShrink() {
     return;
   }
 
-  const desktopQuery = window.matchMedia('(min-width: 768px)');
+  const desktopQuery = window.matchMedia('(min-width: 1024px)');
   let isShrunk = false;
+  let isLocked = false;
+  let lockTimer = null;
 
   const setShrunk = (shouldShrink) => {
     if (isShrunk === shouldShrink) {
@@ -694,6 +696,17 @@ function setupDesktopHeaderShrink() {
     }
 
     isShrunk = shouldShrink;
+
+    // Lock out further scroll-driven updates for slightly longer than the CSS
+    // transition (0.35s) to prevent the browser's scroll-anchoring from
+    // triggering a feedback loop when the sticky header changes height.
+    isLocked = true;
+    clearTimeout(lockTimer);
+    lockTimer = setTimeout(() => {
+      isLocked = false;
+      lockTimer = null;
+    }, 400);
+
     headerElement.classList.toggle('is-shrunk', shouldShrink);
   };
 
@@ -705,6 +718,10 @@ function setupDesktopHeaderShrink() {
 
     // Don't fight scroll-lock while a mobile overlay is open.
     if (document.body.classList.contains('no-scroll')) {
+      return;
+    }
+
+    if (isLocked) {
       return;
     }
 

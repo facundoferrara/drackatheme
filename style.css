@@ -1231,7 +1231,7 @@ main > h1 {
 
 .dracka-newsletter-card__action {
   position: absolute;
-  top: calc(10rem - 20px);
+  top: 25%;
   right: -25px;
   z-index: 10;
 }
@@ -1415,7 +1415,11 @@ main > h1 {
     animation: none !important;
   }
 
-  .site-header {
+  .site-header,
+  .header-inner,
+  .logo,
+  .logo .dracka-animated-logo,
+  .logo .dracka-logo-frame {
     transition: none;
   }
 
@@ -2523,7 +2527,6 @@ main > h1 {
     align-items: center;
     padding: 0 2.5rem;
     min-height: 160px;
-    transition: min-height 0.35s ease;
   }
 
   /* Explicit grid placement — required because .header-left-actions is now
@@ -2555,34 +2558,14 @@ main > h1 {
   /* Logo column */
   .logo {
     height: 160px;
-    transition: height 0.35s ease;
   }
 
   .logo .dracka-animated-logo {
     height: 160px;
-    transition: height 0.35s ease;
   }
 
   .logo .dracka-logo-frame {
     height: calc(160px - 8px);
-    transition: height 0.35s ease;
-  }
-
-  /* Shrunk state (added by JS on scroll) */
-  .site-header.is-shrunk .header-inner {
-    min-height: 90px;
-  }
-
-  .site-header.is-shrunk .logo {
-    height: 90px;
-  }
-
-  .site-header.is-shrunk .logo .dracka-animated-logo {
-    height: 90px;
-  }
-
-  .site-header.is-shrunk .logo .dracka-logo-frame {
-    height: calc(90px - 8px);
   }
 
   /* Desktop nav */
@@ -2635,6 +2618,45 @@ main > h1 {
   .desktop-nav a:hover::after,
   .desktop-nav a:focus-visible::after {
     transform: scaleX(1);
+  }
+}
+
+/* =========================
+   DESKTOP HEADER SHRINK (>=1024px only)
+========================= */
+
+@media (min-width: 1024px) {
+  .header-inner {
+    transition: min-height 0.35s ease;
+  }
+
+  .logo {
+    transition: height 0.35s ease;
+  }
+
+  .logo .dracka-animated-logo {
+    transition: height 0.35s ease;
+  }
+
+  .logo .dracka-logo-frame {
+    transition: height 0.35s ease;
+  }
+
+  /* Shrunk state (added by JS on scroll) */
+  .site-header.is-shrunk .header-inner {
+    min-height: 90px;
+  }
+
+  .site-header.is-shrunk .logo {
+    height: 90px;
+  }
+
+  .site-header.is-shrunk .logo .dracka-animated-logo {
+    height: 90px;
+  }
+
+  .site-header.is-shrunk .logo .dracka-logo-frame {
+    height: calc(90px - 8px);
   }
 }
 
