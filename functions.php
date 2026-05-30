@@ -1120,21 +1120,48 @@ function dracka_register_rest_routes()
                 return new WP_Error('dracka_not_found', 'Artwork not found.', ['status' => 404]);
             }
 
-            $nav     = dracka_get_artwork_navigation($id);
+            /**
+             * Converts a raw navigation item (from dracka_get_artwork_navigation) into
+             * the JS-expected shape: { id, url, title, image: { src, srcset, sizes, alt } }.
+             *
+             * @param array<string,mixed>|null $item
+             * @return array<string,mixed>|null
+             */
+            $format_item = function (?array $item): ?array {
+                if ($item === null) {
+                    return null;
+                }
+                return [
+                    'id'    => $item['id'],
+                    'url'   => $item['url'],
+                    'title' => $item['title'],
+                    'image' => [
+                        'src'    => $item['image_src']    ?? '',
+                        'srcset' => $item['image_srcset'] ?? '',
+                        'sizes'  => $item['image_sizes']  ?? '',
+                        'alt'    => $item['title'],
+                    ],
+                ];
+            };
+
+            $nav      = dracka_get_artwork_navigation($id);
             $thumb_id = (int) get_post_thumbnail_id($id);
             $src_data = $thumb_id > 0 ? wp_get_attachment_image_src($thumb_id, 'large') : false;
 
             return new WP_REST_Response([
                 'current' => [
-                    'id'           => $id,
-                    'url'          => get_permalink($id),
-                    'title'        => get_the_title($id),
-                    'image_src'    => is_array($src_data) ? ($src_data[0] ?? '') : '',
-                    'image_srcset' => $thumb_id > 0 ? (wp_get_attachment_image_srcset($thumb_id, 'large') ?: '') : '',
-                    'image_sizes'  => $thumb_id > 0 ? (wp_get_attachment_image_sizes($thumb_id, 'large') ?: '') : '',
+                    'id'    => $id,
+                    'url'   => get_permalink($id),
+                    'title' => get_the_title($id),
+                    'image' => [
+                        'src'    => is_array($src_data) ? ($src_data[0] ?? '') : '',
+                        'srcset' => $thumb_id > 0 ? (wp_get_attachment_image_srcset($thumb_id, 'large') ?: '') : '',
+                        'sizes'  => $thumb_id > 0 ? (wp_get_attachment_image_sizes($thumb_id, 'large') ?: '') : '',
+                        'alt'    => get_the_title($id),
+                    ],
                 ],
-                'previous' => $nav['previous'],
-                'next'     => $nav['next'],
+                'previous' => $format_item($nav['previous']),
+                'next'     => $format_item($nav['next']),
             ], 200);
         },
         'permission_callback' => '__return_true',
