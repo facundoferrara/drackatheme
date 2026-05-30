@@ -1,11 +1,15 @@
 <?php
 get_header();
 
-$artwork_id = get_the_ID();
-$album_id   = (int) get_post_meta($artwork_id, 'dracka_album_id', true);
-$album_link = $album_id ? get_permalink($album_id) : '';
-$nav        = dracka_get_artwork_navigation($artwork_id);
-$has_nav    = $nav['previous'] !== null || $nav['next'] !== null;
+$artwork_id    = get_the_ID();
+$album_id      = (int) get_post_meta($artwork_id, 'dracka_album_id', true);
+$album_link    = $album_id ? get_permalink($album_id) : '';
+$nav           = dracka_get_artwork_navigation($artwork_id);
+$has_nav       = $nav['previous'] !== null || $nav['next'] !== null;
+$prev_id       = $nav['previous'] ? (int) $nav['previous']['id'] : 0;
+$next_id       = $nav['next']     ? (int) $nav['next']['id']     : 0;
+$prev_album_id = $prev_id ? (int) get_post_meta($prev_id, 'dracka_album_id', true) : 0;
+$next_album_id = $next_id ? (int) get_post_meta($next_id, 'dracka_album_id', true) : 0;
 
 // Build current artwork image data for the embedded JSON block.
 $thumb_id      = (int) get_post_thumbnail_id($artwork_id);
@@ -23,16 +27,20 @@ $current_image = [
 <?php echo wp_json_encode([
     'restBase'  => esc_url_raw(rest_url('dracka/v1/artwork-nav/')),
     'current'   => [
-        'id'    => $artwork_id,
-        'url'   => get_permalink($artwork_id),
-        'title' => get_the_title($artwork_id),
-        'image' => $current_image,
+        'id'      => $artwork_id,
+        'url'     => get_permalink($artwork_id),
+        'title'   => get_the_title($artwork_id),
+        'content' => apply_filters('the_content', get_post_field('post_content', $artwork_id)),
+        'album'   => $album_id ? ['url' => $album_link, 'title' => get_the_title($album_id)] : null,
+        'image'   => $current_image,
     ],
     'previous'  => $nav['previous'] ? [
-        'id'    => $nav['previous']['id'],
-        'url'   => $nav['previous']['url'],
-        'title' => $nav['previous']['title'],
-        'image' => [
+        'id'      => $nav['previous']['id'],
+        'url'     => $nav['previous']['url'],
+        'title'   => $nav['previous']['title'],
+        'content' => apply_filters('the_content', get_post_field('post_content', $prev_id)),
+        'album'   => $prev_album_id ? ['url' => get_permalink($prev_album_id), 'title' => get_the_title($prev_album_id)] : null,
+        'image'   => [
             'src'    => $nav['previous']['image_src'],
             'srcset' => $nav['previous']['image_srcset'],
             'sizes'  => $nav['previous']['image_sizes'],
@@ -40,10 +48,12 @@ $current_image = [
         ],
     ] : null,
     'next'      => $nav['next'] ? [
-        'id'    => $nav['next']['id'],
-        'url'   => $nav['next']['url'],
-        'title' => $nav['next']['title'],
-        'image' => [
+        'id'      => $nav['next']['id'],
+        'url'     => $nav['next']['url'],
+        'title'   => $nav['next']['title'],
+        'content' => apply_filters('the_content', get_post_field('post_content', $next_id)),
+        'album'   => $next_album_id ? ['url' => get_permalink($next_album_id), 'title' => get_the_title($next_album_id)] : null,
+        'image'   => [
             'src'    => $nav['next']['image_src'],
             'srcset' => $nav['next']['image_srcset'],
             'sizes'  => $nav['next']['image_sizes'],
@@ -60,9 +70,9 @@ $current_image = [
             <article <?php post_class(); ?>>
                 <h1 class="artwork-single__title"><?php the_title(); ?></h1>
 
-                <?php if ($album_link) : ?>
-                    <p class="artwork-album">Album: <a href="<?php echo esc_url($album_link); ?>"><?php echo esc_html(get_the_title($album_id)); ?></a></p>
-                <?php endif; ?>
+                <p class="artwork-album"<?php echo !$album_link ? ' hidden' : ''; ?>>
+                    <?php if ($album_link) : ?>Album: <a href="<?php echo esc_url($album_link); ?>"><?php echo esc_html(get_the_title($album_id)); ?></a><?php endif; ?>
+                </p>
 
                 <?php if ($has_nav) : ?>
                 <div class="artwork-nav"

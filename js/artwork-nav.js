@@ -87,6 +87,23 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Escape a string for safe use in innerHTML.
+   * @param {string} str
+   * @returns {string}
+   */
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ---------------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------------
 
@@ -115,14 +132,20 @@
     if (busy) return;
     busy = true;
 
-    var container = document.querySelector('.artwork-nav');
-    var frame     = container ? container.querySelector('.artwork-nav__frame') : null;
-    var img       = frame ? frame.querySelector('img.artwork-nav__img') : null;
+    var container  = document.querySelector('.artwork-nav');
+    var frame      = container ? container.querySelector('.artwork-nav__frame') : null;
+    var img        = frame ? frame.querySelector('img.artwork-nav__img') : null;
+    var contentEl  = document.querySelector('.artwork-content');
+    var albumEl    = document.querySelector('.artwork-album');
 
     if (!frame || !img) {
       busy = false;
       return;
     }
+
+    // Start fading supplementary text immediately alongside the image exit.
+    if (contentEl) contentEl.classList.add('is-fading');
+    if (albumEl)   albumEl.classList.add('is-fading');
 
     // Kick off the REST prefetch immediately so it can complete during the
     // ~650ms animation. finishTransition will find the result in the cache.
@@ -242,6 +265,24 @@
     var h1 = document.querySelector('.artwork-single__title');
     if (h1) h1.textContent = current.title;
     document.title = current.title;
+
+    // Fade in updated content + album link.
+    var contentEl = document.querySelector('.artwork-content');
+    if (contentEl) {
+      contentEl.innerHTML = current.content || '';
+      contentEl.classList.remove('is-fading');
+    }
+    var albumEl = document.querySelector('.artwork-album');
+    if (albumEl) {
+      if (current.album) {
+        albumEl.innerHTML = 'Album: <a href="' + escHtml(current.album.url) + '">' + escHtml(current.album.title) + '</a>';
+        albumEl.removeAttribute('hidden');
+      } else {
+        albumEl.innerHTML = '';
+        albumEl.setAttribute('hidden', '');
+      }
+      albumEl.classList.remove('is-fading');
+    }
 
     // Update URL.
     if (pushHistory) {

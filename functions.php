@@ -1131,10 +1131,17 @@ function dracka_register_rest_routes()
                 if ($item === null) {
                     return null;
                 }
+                $item_id  = (int) $item['id'];
+                $album_id = (int) get_post_meta($item_id, 'dracka_album_id', true);
                 return [
-                    'id'    => $item['id'],
-                    'url'   => $item['url'],
-                    'title' => $item['title'],
+                    'id'      => $item_id,
+                    'url'     => $item['url'],
+                    'title'   => $item['title'],
+                    'content' => apply_filters('the_content', get_post_field('post_content', $item_id)),
+                    'album'   => $album_id ? [
+                        'url'   => get_permalink($album_id),
+                        'title' => get_the_title($album_id),
+                    ] : null,
                     'image' => [
                         'src'    => $item['image_src']    ?? '',
                         'srcset' => $item['image_srcset'] ?? '',
@@ -1144,16 +1151,22 @@ function dracka_register_rest_routes()
                 ];
             };
 
-            $nav      = dracka_get_artwork_navigation($id);
-            $thumb_id = (int) get_post_thumbnail_id($id);
-            $src_data = $thumb_id > 0 ? wp_get_attachment_image_src($thumb_id, 'large') : false;
+            $nav           = dracka_get_artwork_navigation($id);
+            $thumb_id      = (int) get_post_thumbnail_id($id);
+            $src_data      = $thumb_id > 0 ? wp_get_attachment_image_src($thumb_id, 'large') : false;
+            $current_album = (int) get_post_meta($id, 'dracka_album_id', true);
 
             return new WP_REST_Response([
                 'current' => [
-                    'id'    => $id,
-                    'url'   => get_permalink($id),
-                    'title' => get_the_title($id),
-                    'image' => [
+                    'id'      => $id,
+                    'url'     => get_permalink($id),
+                    'title'   => get_the_title($id),
+                    'content' => apply_filters('the_content', get_post_field('post_content', $id)),
+                    'album'   => $current_album ? [
+                        'url'   => get_permalink($current_album),
+                        'title' => get_the_title($current_album),
+                    ] : null,
+                    'image'   => [
                         'src'    => is_array($src_data) ? ($src_data[0] ?? '') : '',
                         'srcset' => $thumb_id > 0 ? (wp_get_attachment_image_srcset($thumb_id, 'large') ?: '') : '',
                         'sizes'  => $thumb_id > 0 ? (wp_get_attachment_image_sizes($thumb_id, 'large') ?: '') : '',

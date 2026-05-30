@@ -2373,6 +2373,21 @@ main > h1 {
    Artwork single – prev/next navigation
    =========================================================================== */
 
+.artwork-content {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  transition: opacity 220ms ease;
+}
+
+.artwork-album {
+  transition: opacity 220ms ease;
+}
+
+.artwork-content.is-fading,
+.artwork-album.is-fading {
+  opacity: 0;
+}
+
 .artwork-nav {
   display: flex;
   align-items: center;
