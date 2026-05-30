@@ -701,7 +701,7 @@ function dracka_render_content_card_markup($post_id, $content_type)
     }
 
     if ($content_type === 'post') {
-        $excerpt = trim((string) wp_strip_all_tags((string) get_the_excerpt($post_id)));
+        $excerpt = wp_trim_words(trim(wp_strip_all_tags(get_the_excerpt($post_id))), 27, '&hellip;');
         $excerpt_html = '';
 
         if ($excerpt !== '') {
@@ -853,22 +853,6 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
             esc_html($go_to_library_label)
         );
 
-        $last_card_index = count($initial_cards) - 1;
-
-        if ($last_card_index >= 0) {
-            $initial_cards[$last_card_index] = str_replace(
-                'class="dracka-newsletter-card"',
-                'class="dracka-newsletter-card dracka-newsletter-card--with-action"',
-                $initial_cards[$last_card_index]
-            );
-
-            $initial_cards[$last_card_index] = str_replace(
-                '</article>',
-                $see_all_markup . '</article>',
-                $initial_cards[$last_card_index]
-            );
-        }
-
         $has_more = false;
         $reached_cap = false;
     }
@@ -903,14 +887,23 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
             class="dracka-collapsible__content<?php echo $initially_open ? ' is-open' : ''; ?>"
             <?php if (!$initially_open) : ?>hidden<?php endif; ?>
             <?php if ($initially_open) : ?>style="max-height: none; opacity: 1;" <?php endif; ?>>
+            <?php if ($is_newsletter) : ?>
+            <div class="dracka-newsletter-grid-wrap">
+                <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
+                    <?php echo $initial_cards_html; ?>
+                </div>
+                <?php echo wp_kses_post($see_all_markup); ?>
+            </div>
+            <?php else : ?>
             <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
                 <?php echo $initial_cards_html; ?>
             </div>
 
-            <?php if (!$is_newsletter && $has_more) : ?>
+            <?php if ($has_more) : ?>
                 <button type="button" class="<?php echo esc_attr($css_prefix); ?>-show-more" data-show-more><?php echo esc_html($show_more_label); ?></button>
-            <?php elseif (!$is_newsletter && $reached_cap) : ?>
+            <?php elseif ($reached_cap) : ?>
                 <a class="<?php echo esc_attr($css_prefix); ?>-go-library" href="<?php echo esc_url($go_to_library_url); ?>"><?php echo esc_html($go_to_library_label); ?></a>
+            <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
