@@ -729,12 +729,149 @@ function setupDesktopHeaderShrink() {
   updateShrinkState();
 }
 
+/**
+ * Builds a seamless ticker loop by measuring content width and cloning enough
+ * lines to keep the viewport continuously filled while the track translates.
+ */
+function setupNewsTicker() {
+  const tickerElements = document.querySelectorAll('[data-news-ticker]');
+
+  if (!tickerElements.length) {
+    return;
+  }
+
+  const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  tickerElements.forEach((tickerElement) => {
+    const viewportElement = tickerElement.querySelector('.dracka-news-ticker__viewport');
+    const trackElement = tickerElement.querySelector('[data-news-ticker-track]');
+    const baseLineElement = tickerElement.querySelector('[data-news-ticker-line]');
+
+    if (!viewportElement || !trackElement || !baseLineElement) {
+      return;
+    }
+
+    let rafId = null;
+    let resizeRafId = null;
+    let offsetPx = 0;
+    let lastTimestamp = 0;
+    let baseLineWidth = 0;
+    let pixelsPerSecond = 0;
+
+    const clearClones = () => {
+      trackElement.querySelectorAll('[data-ticker-clone="true"]').forEach((cloneElement) => {
+        cloneElement.remove();
+      });
+    };
+
+    const stopAnimation = () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+
+      lastTimestamp = 0;
+      offsetPx = 0;
+      trackElement.style.transform = 'translate3d(0, 0, 0)';
+    };
+
+    const animate = (timestamp) => {
+      if (!baseLineWidth || !pixelsPerSecond) {
+        return;
+      }
+
+      if (!lastTimestamp) {
+        lastTimestamp = timestamp;
+      }
+
+      const deltaSeconds = Math.max(0, (timestamp - lastTimestamp) / 1000);
+      lastTimestamp = timestamp;
+
+      offsetPx += pixelsPerSecond * deltaSeconds;
+
+      if (offsetPx >= baseLineWidth) {
+        offsetPx -= baseLineWidth;
+      }
+
+      trackElement.style.transform = `translate3d(${-offsetPx}px, 0, 0)`;
+      rafId = window.requestAnimationFrame(animate);
+    };
+
+    const buildTicker = () => {
+      stopAnimation();
+      clearClones();
+
+      baseLineWidth = Math.ceil(baseLineElement.getBoundingClientRect().width);
+
+      if (!baseLineWidth) {
+        return;
+      }
+
+      const viewportWidth = Math.ceil(viewportElement.getBoundingClientRect().width);
+      const isReducedMotion = reduceMotionQuery.matches;
+
+      if (isReducedMotion) {
+        viewportElement.style.overflowX = 'auto';
+        return;
+      }
+
+      viewportElement.style.overflowX = 'hidden';
+
+      const minimumTrackWidth = Math.max(baseLineWidth * 2, viewportWidth + baseLineWidth);
+      let currentTrackWidth = baseLineWidth;
+
+      while (currentTrackWidth < minimumTrackWidth) {
+        const cloneElement = baseLineElement.cloneNode(true);
+        cloneElement.setAttribute('aria-hidden', 'true');
+        cloneElement.setAttribute('data-ticker-clone', 'true');
+        trackElement.appendChild(cloneElement);
+        currentTrackWidth += baseLineWidth;
+      }
+
+      const speedSeconds = Number.parseFloat(tickerElement.dataset.speedSeconds || '28');
+      const safeSeconds = Number.isFinite(speedSeconds) ? Math.max(8, speedSeconds) : 28;
+      pixelsPerSecond = baseLineWidth / safeSeconds;
+
+      rafId = window.requestAnimationFrame(animate);
+    };
+
+    const queueBuild = () => {
+      if (resizeRafId !== null) {
+        return;
+      }
+
+      resizeRafId = window.requestAnimationFrame(() => {
+        resizeRafId = null;
+        buildTicker();
+      });
+    };
+
+    window.addEventListener('resize', queueBuild, { passive: true });
+
+    if (typeof reduceMotionQuery.addEventListener === 'function') {
+      reduceMotionQuery.addEventListener('change', queueBuild);
+    } else if (typeof reduceMotionQuery.addListener === 'function') {
+      reduceMotionQuery.addListener(queueBuild);
+    }
+
+    if (document.fonts && typeof document.fonts.addEventListener === 'function') {
+      document.fonts.addEventListener('loadingdone', queueBuild);
+      document.fonts.ready.then(queueBuild).catch(() => {
+        // Ignore font readiness failures and keep initial measurement.
+      });
+    }
+
+    buildTicker();
+  });
+}
+
 const collapsibleBlocks = document.querySelectorAll('[data-collapsible]');
 
 setupMobilePanels();
 setupAnimatedLogo();
 setupResponsiveHeaderCollapse();
 setupDesktopHeaderShrink();
+setupNewsTicker();
 
 collapsibleBlocks.forEach((blockElement) => {
   if (!blockHasRenderableCards(blockElement)) {
