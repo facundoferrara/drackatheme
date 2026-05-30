@@ -75,7 +75,7 @@ $has_episode_navigation = !empty($series_issues);
                             <?php endif; ?>
 
                             <span class="issue-episodes-nav__segment issue-episodes-nav__segment--episodes">
-                                <span class="dracka-collapsible__title">Episodes</span>
+                                <span class="dracka-collapsible__title">Index</span>
                                 <span class="dracka-collapsible__arrow" aria-hidden="true"></span>
                             </span>
 

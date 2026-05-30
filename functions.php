@@ -713,7 +713,7 @@ function dracka_render_content_card_markup($post_id, $content_type)
         }
 
         return sprintf(
-            '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link"><span class="%1$s-card__media">%3$s<span class="%1$s-card__title">%4$s</span></span>%5$s</a></article>',
+            '<article class="%1$s-card"><a href="%2$s" class="%1$s-card__link"><span class="%1$s-card__media">%3$s<span class="%1$s-card__overlay"><span class="%1$s-card__title">%4$s</span>%5$s</span></span></a></article>',
             esc_attr($css_prefix),
             esc_url($permalink),
             $thumbnail,
