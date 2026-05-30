@@ -509,7 +509,7 @@ main > h1 {
   background: var(--color-surface);
   border: 1px solid var(--color-panel);
   border-radius: 3px;
-  padding: 1.5rem;
+  padding: 0;
   margin-bottom: 2rem;
 }
 
@@ -1585,8 +1585,26 @@ main > h1 {
   margin: 0;
   padding: 0;
   display: flex !important;
+  flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
+  position: relative;
+  gap: 0;
+}
+
+/* Non-current languages: hidden by default, dropdown below on hover/focus */
+.header-lang-switcher .trp-language-switcher li:not(.trp-current-language):not(.current-language) {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+}
+
+/* Stack multiple non-current items using sibling offsets if needed */
+.header-lang-switcher:hover .trp-language-switcher li:not(.trp-current-language):not(.current-language),
+.header-lang-switcher:focus-within .trp-language-switcher li:not(.trp-current-language):not(.current-language) {
+  display: flex;
 }
 
 /* Flags only — hide text labels */
