@@ -751,97 +751,51 @@ function setupNewsTicker() {
       return;
     }
 
-    let rafId = null;
-    let resizeRafId = null;
-    let offsetPx = 0;
-    let lastTimestamp = 0;
-    let baseLineWidth = 0;
-    let pixelsPerSecond = 0;
+    let buildRafId = null;
 
     const clearClones = () => {
-      trackElement.querySelectorAll('[data-ticker-clone="true"]').forEach((cloneElement) => {
-        cloneElement.remove();
-      });
-    };
-
-    const stopAnimation = () => {
-      if (rafId !== null) {
-        window.cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-
-      lastTimestamp = 0;
-      offsetPx = 0;
-      trackElement.style.transform = 'translate3d(0, 0, 0)';
-    };
-
-    const animate = (timestamp) => {
-      if (!baseLineWidth || !pixelsPerSecond) {
-        return;
-      }
-
-      if (!lastTimestamp) {
-        lastTimestamp = timestamp;
-      }
-
-      const deltaSeconds = Math.max(0, (timestamp - lastTimestamp) / 1000);
-      lastTimestamp = timestamp;
-
-      offsetPx += pixelsPerSecond * deltaSeconds;
-
-      if (offsetPx >= baseLineWidth) {
-        offsetPx -= baseLineWidth;
-      }
-
-      trackElement.style.transform = `translate3d(${-offsetPx}px, 0, 0)`;
-      rafId = window.requestAnimationFrame(animate);
+      trackElement.querySelectorAll('[data-ticker-clone="true"]').forEach((el) => el.remove());
     };
 
     const buildTicker = () => {
-      stopAnimation();
+      tickerElement.classList.remove('is-ready');
       clearClones();
 
-      baseLineWidth = Math.ceil(baseLineElement.getBoundingClientRect().width);
+      const baseLineWidth = baseLineElement.getBoundingClientRect().width;
 
       if (!baseLineWidth) {
+        // Element not yet laid out; fonts.ready or resize will trigger a retry.
         return;
       }
 
-      const viewportWidth = Math.ceil(viewportElement.getBoundingClientRect().width);
-      const isReducedMotion = reduceMotionQuery.matches;
-
-      if (isReducedMotion) {
+      if (reduceMotionQuery.matches) {
         viewportElement.style.overflowX = 'auto';
         return;
       }
 
-      viewportElement.style.overflowX = 'hidden';
+      viewportElement.style.overflowX = '';
 
-      const minimumTrackWidth = Math.max(baseLineWidth * 2, viewportWidth + baseLineWidth);
-      let currentTrackWidth = baseLineWidth;
+      const viewportWidth = viewportElement.getBoundingClientRect().width;
+      const copies = Math.max(2, Math.ceil((viewportWidth + baseLineWidth) / baseLineWidth));
 
-      while (currentTrackWidth < minimumTrackWidth) {
-        const cloneElement = baseLineElement.cloneNode(true);
-        cloneElement.setAttribute('aria-hidden', 'true');
-        cloneElement.setAttribute('data-ticker-clone', 'true');
-        trackElement.appendChild(cloneElement);
-        currentTrackWidth += baseLineWidth;
+      for (let i = 1; i < copies; i++) {
+        const clone = baseLineElement.cloneNode(true);
+        clone.setAttribute('aria-hidden', 'true');
+        clone.setAttribute('data-ticker-clone', 'true');
+        trackElement.appendChild(clone);
       }
 
-      const speedSeconds = Number.parseFloat(tickerElement.dataset.speedSeconds || '28');
-      const safeSeconds = Number.isFinite(speedSeconds) ? Math.max(8, speedSeconds) : 28;
-      pixelsPerSecond = baseLineWidth / safeSeconds;
-
-      rafId = window.requestAnimationFrame(animate);
+      tickerElement.style.setProperty('--dracka-ticker-copies', String(copies));
+      tickerElement.classList.add('is-ready');
     };
 
     const queueBuild = () => {
-      if (resizeRafId !== null) {
+      if (buildRafId !== null) {
         return;
       }
 
-      resizeRafId = window.requestAnimationFrame(() => {
-        resizeRafId = null;
+      buildRafId = window.requestAnimationFrame(() => {
+        buildRafId = null;
         buildTicker();
       });
     };
@@ -854,11 +808,8 @@ function setupNewsTicker() {
       reduceMotionQuery.addListener(queueBuild);
     }
 
-    if (document.fonts && typeof document.fonts.addEventListener === 'function') {
-      document.fonts.addEventListener('loadingdone', queueBuild);
-      document.fonts.ready.then(queueBuild).catch(() => {
-        // Ignore font readiness failures and keep initial measurement.
-      });
+    if (document.fonts) {
+      document.fonts.ready.then(queueBuild).catch(() => {});
     }
 
     buildTicker();

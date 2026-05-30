@@ -620,9 +620,11 @@ function dracka_get_premiere_badge_markup($post_id, $days = 10)
         return '';
     }
 
-    return '<span class="content-badge content-badge--premiere"><span class="content-badge__label">PREMIERE</span></span>'
-        . '<span class="content-badge__fold content-badge__fold--top" aria-hidden="true"></span>'
-        . '<span class="content-badge__fold content-badge__fold--bottom" aria-hidden="true"></span>';
+    $library_post_types = ['issue', 'series'];
+    $post_type = (string) get_post_type($post_id);
+    $label = in_array($post_type, $library_post_types, true) ? 'PREMIERE' : 'NEW';
+
+    return '<span class="content-badge content-badge--premiere"><span class="content-badge__label">' . $label . '</span></span>';
 }
 
 /**
