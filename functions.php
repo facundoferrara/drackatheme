@@ -115,6 +115,18 @@ function dracka_enqueue_assets()
         true
     );
 
+    if (is_singular('artwork')) {
+        $artwork_nav_path    = get_template_directory() . '/js/artwork-nav.js';
+        $artwork_nav_version = file_exists($artwork_nav_path) ? (string) filemtime($artwork_nav_path) : '0.1';
+        wp_enqueue_script(
+            'dracka-artwork-nav',
+            get_template_directory_uri() . '/js/artwork-nav.js',
+            [],
+            $artwork_nav_version,
+            true
+        );
+    }
+
     if (is_singular() && comments_open()) {
         wp_enqueue_script('comment-reply');
     }
@@ -1094,6 +1106,45 @@ function dracka_register_rest_routes()
             'args'                => $shared_args,
         ]);
     }
+
+    register_rest_route('dracka/v1', '/artwork-nav/(?P<id>[\d]+)', [
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => function (WP_REST_Request $request): WP_REST_Response|WP_Error {
+            $id   = (int) $request->get_param('id');
+            $post = get_post($id);
+            if (
+                !($post instanceof WP_Post)
+                || $post->post_type !== 'artwork'
+                || $post->post_status !== 'publish'
+            ) {
+                return new WP_Error('dracka_not_found', 'Artwork not found.', ['status' => 404]);
+            }
+
+            $nav     = dracka_get_artwork_navigation($id);
+            $thumb_id = (int) get_post_thumbnail_id($id);
+            $src_data = $thumb_id > 0 ? wp_get_attachment_image_src($thumb_id, 'large') : false;
+
+            return new WP_REST_Response([
+                'current' => [
+                    'id'           => $id,
+                    'url'          => get_permalink($id),
+                    'title'        => get_the_title($id),
+                    'image_src'    => is_array($src_data) ? ($src_data[0] ?? '') : '',
+                    'image_srcset' => $thumb_id > 0 ? (wp_get_attachment_image_srcset($thumb_id, 'large') ?: '') : '',
+                    'image_sizes'  => $thumb_id > 0 ? (wp_get_attachment_image_sizes($thumb_id, 'large') ?: '') : '',
+                ],
+                'previous' => $nav['previous'],
+                'next'     => $nav['next'],
+            ], 200);
+        },
+        'permission_callback' => '__return_true',
+        'args'                => [
+            'id' => [
+                'sanitize_callback' => 'absint',
+                'validate_callback' => function ($val) { return is_numeric($val) && (int) $val > 0; },
+            ],
+        ],
+    ]);
 }
 add_action('rest_api_init', 'dracka_register_rest_routes');
 
@@ -1829,6 +1880,9 @@ const DRACKA_SERIES_RATING_META_KEY = 'dracka_series_rating';
 const DRACKA_SERIES_GATE_TITLE_META_KEY = 'dracka_series_gate_title';
 const DRACKA_SERIES_GATE_BODY_META_KEY = 'dracka_series_gate_body';
 const DRACKA_SERIES_STORY_STATUS_META_KEY = 'dracka_series_story_status';
+const DRACKA_ALBUM_RATING_META_KEY = 'dracka_album_rating';
+const DRACKA_ALBUM_GATE_TITLE_META_KEY = 'dracka_album_gate_title';
+const DRACKA_ALBUM_GATE_BODY_META_KEY = 'dracka_album_gate_body';
 const DRACKA_SERIES_IS_STANDALONE_META_KEY = 'dracka_series_is_standalone';
 const DRACKA_SERIES_STANDALONE_FLIPBOOK_META_KEY = 'dracka_series_standalone_flipbook_id';
 
@@ -2097,8 +2151,73 @@ function dracka_add_relationship_metaboxes()
         'side',
         'default'
     );
+
+    add_meta_box(
+        'dracka_album_details',
+        'Album Details',
+        'dracka_render_album_details_metabox',
+        ['album'],
+        'side',
+        'default'
+    );
 }
 add_action('add_meta_boxes', 'dracka_add_relationship_metaboxes');
+
+/**
+ * Renders album details metabox fields (audience rating + age-gate text).
+ *
+ * @param WP_Post $post Current album post.
+ * @return void
+ */
+function dracka_render_album_details_metabox($post)
+{
+    wp_nonce_field('dracka_save_album_details', 'dracka_album_details_nonce');
+
+    $album_rating = (string) get_post_meta($post->ID, DRACKA_ALBUM_RATING_META_KEY, true);
+    $gate_title   = (string) get_post_meta($post->ID, DRACKA_ALBUM_GATE_TITLE_META_KEY, true);
+    $gate_body    = (string) get_post_meta($post->ID, DRACKA_ALBUM_GATE_BODY_META_KEY, true);
+
+    if (!in_array($album_rating, ['everyone', '16', '18'], true)) {
+        $album_rating = 'everyone';
+    }
+
+    echo '<p>';
+    echo '<label for="dracka_album_rating" style="display:block;margin-bottom:4px"><strong>Audience Rating</strong></label>';
+    echo '<select id="dracka_album_rating" name="dracka_album_rating" style="width:100%">';
+    echo '<option value="everyone"' . selected($album_rating, 'everyone', false) . '>Everyone (E)</option>';
+    echo '<option value="16"'       . selected($album_rating, '16',       false) . '>+16</option>';
+    echo '<option value="18"'       . selected($album_rating, '18',       false) . '>+18</option>';
+    echo '</select>';
+    echo '</p>';
+
+    $gate_fields_style = in_array($album_rating, ['16', '18'], true) ? '' : 'display:none';
+
+    echo '<div id="dracka_album_gate_fields" style="' . esc_attr($gate_fields_style) . '">';
+
+    echo '<p>';
+    echo '<label for="dracka_album_gate_title" style="display:block;margin-bottom:4px"><strong>Age Gate — Headline</strong></label>';
+    echo '<input type="text" id="dracka_album_gate_title" name="dracka_album_gate_title" value="' . esc_attr($gate_title) . '" style="width:100%" placeholder="e.g. Are you over 16?">';
+    echo '</p>';
+
+    echo '<p>';
+    echo '<label for="dracka_album_gate_body" style="display:block;margin-bottom:4px"><strong>Age Gate — Body</strong></label>';
+    echo '<textarea id="dracka_album_gate_body" name="dracka_album_gate_body" rows="3" style="width:100%" placeholder="e.g. This album contains mature content...">' . esc_textarea($gate_body) . '</textarea>';
+    echo '</p>';
+
+    echo '</div>';
+
+    echo '<script type="text/javascript">';
+    echo 'document.addEventListener("DOMContentLoaded", function() {';
+    echo 'var ratingSelect = document.getElementById("dracka_album_rating");';
+    echo 'var gateFields   = document.getElementById("dracka_album_gate_fields");';
+    echo 'if (ratingSelect && gateFields) {';
+    echo '  ratingSelect.addEventListener("change", function() {';
+    echo '    gateFields.style.display = (ratingSelect.value === "16" || ratingSelect.value === "18") ? "" : "none";';
+    echo '  });';
+    echo '}';
+    echo '});';
+    echo '</script>';
+}
 
 // ---------------------------------------------------------------------------
 // Age Gate – resolver and front-end render helpers
@@ -2174,10 +2293,70 @@ function dracka_get_series_gate_config(int $series_id): ?array
  *
  * @return void
  */
+/**
+ * Returns the album ID that governs the age gate for the current page.
+ *
+ * @return int Album post ID, or 0 when not applicable.
+ */
+function dracka_get_gate_album_id(): int
+{
+    if (is_singular('album')) {
+        return (int) get_queried_object_id();
+    }
+
+    return 0;
+}
+
+/**
+ * Returns the age-gate configuration for the given album, or null when no gate is required.
+ *
+ * @param int $album_id Album post ID.
+ * @return array{series_id:int,rating:string,gate_title:string,gate_body:string}|null
+ */
+function dracka_get_album_gate_config(int $album_id): ?array
+{
+    if ($album_id <= 0) {
+        return null;
+    }
+
+    $rating = (string) get_post_meta($album_id, DRACKA_ALBUM_RATING_META_KEY, true);
+
+    if (!in_array($rating, ['16', '18'], true)) {
+        return null;
+    }
+
+    $gate_title = (string) get_post_meta($album_id, DRACKA_ALBUM_GATE_TITLE_META_KEY, true);
+    $gate_body  = (string) get_post_meta($album_id, DRACKA_ALBUM_GATE_BODY_META_KEY, true);
+
+    if ($gate_title === '') {
+        $gate_title = $rating === '18'
+            ? 'Are you over 18?'
+            : 'Are you over 16?';
+    }
+
+    if ($gate_body === '') {
+        $gate_body = $rating === '18'
+            ? 'This album contains mature content intended for viewers aged 18 and above. You must be 18 or older to continue.'
+            : 'This album contains mature content intended for viewers aged 16 and above. You must be 16 or older to continue.';
+    }
+
+    return [
+        'series_id'  => $album_id,
+        'rating'     => $rating,
+        'gate_title' => $gate_title,
+        'gate_body'  => $gate_body,
+    ];
+}
+
 function dracka_render_age_gate(): void
 {
     $series_id = dracka_get_gate_series_id();
     $config    = dracka_get_series_gate_config($series_id);
+
+    if ($config === null) {
+        $album_id = dracka_get_gate_album_id();
+        $config   = dracka_get_album_gate_config($album_id);
+    }
 
     if ($config === null) {
         return;
@@ -2586,6 +2765,163 @@ function dracka_get_issue_series_navigation($issue_id): array
     $navigation['previous'] = $current_index > 0 ? $issues[$current_index - 1] : null;
     $navigation['next'] = $current_index < count($issues) - 1 ? $issues[$current_index + 1] : null;
     $navigation['last'] = $current_index < count($issues) - 1 ? $issues[count($issues) - 1] : null;
+
+    return $navigation;
+}
+
+/**
+ * Builds album-scoped (or global standalone) navigation data for a single artwork page.
+ *
+ * When the artwork belongs to an album, navigation is scoped to sibling artworks in that
+ * album ordered by menu_order ASC then date DESC (same as the album grid query).
+ * When the artwork is standalone (no album), navigation is global among all standalone
+ * artworks ordered by date ASC.
+ *
+ * Each item in 'artworks', 'previous', and 'next' contains:
+ *   id, url, title, image_src, image_srcset, image_sizes
+ *
+ * @param int $artwork_id Current artwork post ID.
+ * @return array<string, mixed>
+ */
+function dracka_get_artwork_navigation(int $artwork_id): array
+{
+    $navigation = [
+        'context_id' => 0,
+        'is_album'   => false,
+        'previous'   => null,
+        'next'       => null,
+    ];
+
+    $artwork_id = (int) $artwork_id;
+    if ($artwork_id <= 0) {
+        return $navigation;
+    }
+
+    $album_id = (int) get_post_meta($artwork_id, 'dracka_album_id', true);
+
+    /**
+     * Resolves image data for a given artwork post ID.
+     *
+     * @param int $id Artwork post ID.
+     * @return array{id:int,url:string,title:string,image_src:string,image_srcset:string,image_sizes:string}
+     */
+    $make_item = function (int $id) use ($artwork_id): array {
+        $thumb_id  = (int) get_post_thumbnail_id($id);
+        $image_src = '';
+        $srcset    = '';
+        $sizes     = '';
+        if ($thumb_id > 0) {
+            $src_data  = wp_get_attachment_image_src($thumb_id, 'large');
+            $image_src = is_array($src_data) ? (string) ($src_data[0] ?? '') : '';
+            $srcset    = (string) (wp_get_attachment_image_srcset($thumb_id, 'large') ?: '');
+            $sizes     = (string) (wp_get_attachment_image_sizes($thumb_id, 'large') ?: '');
+        }
+        return [
+            'id'          => $id,
+            'url'         => (string) get_permalink($id),
+            'title'       => (string) get_the_title($id),
+            'image_src'   => $image_src,
+            'image_srcset' => $srcset,
+            'image_sizes'  => $sizes,
+        ];
+    };
+
+    if ($album_id > 0) {
+        // --- Album-scoped navigation ---
+        $query = new WP_Query([
+            'post_type'      => 'artwork',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'no_found_rows'  => true,
+            'meta_query'     => [
+                [
+                    'key'     => 'dracka_album_id',
+                    'value'   => $album_id,
+                    'compare' => '=',
+                    'type'    => 'NUMERIC',
+                ],
+            ],
+            'orderby'        => ['menu_order' => 'ASC', 'date' => 'DESC'],
+        ]);
+
+        $ids           = [];
+        $current_index = -1;
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $ids[] = (int) get_the_ID();
+                if ((int) get_the_ID() === $artwork_id) {
+                    $current_index = count($ids) - 1;
+                }
+            }
+        }
+
+        wp_reset_postdata();
+
+        if ($current_index < 0) {
+            return $navigation;
+        }
+
+        $navigation['context_id'] = $album_id;
+        $navigation['is_album']   = true;
+        $navigation['previous']   = $current_index > 0
+            ? $make_item($ids[$current_index - 1])
+            : null;
+        $navigation['next']       = $current_index < count($ids) - 1
+            ? $make_item($ids[$current_index + 1])
+            : null;
+    } else {
+        // --- Global standalone navigation (artworks with no album), ordered by date ASC ---
+        $query = new WP_Query([
+            'post_type'      => 'artwork',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'no_found_rows'  => true,
+            'orderby'        => 'date',
+            'order'          => 'ASC',
+            'meta_query'     => [
+                'relation' => 'OR',
+                [
+                    'key'     => 'dracka_album_id',
+                    'compare' => 'NOT EXISTS',
+                ],
+                [
+                    'key'     => 'dracka_album_id',
+                    'value'   => ['', '0'],
+                    'compare' => 'IN',
+                ],
+            ],
+        ]);
+
+        $ids           = [];
+        $current_index = -1;
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $ids[] = (int) get_the_ID();
+                if ((int) get_the_ID() === $artwork_id) {
+                    $current_index = count($ids) - 1;
+                }
+            }
+        }
+
+        wp_reset_postdata();
+
+        if ($current_index < 0) {
+            return $navigation;
+        }
+
+        $navigation['context_id'] = 0;
+        $navigation['is_album']   = false;
+        $navigation['previous']   = $current_index > 0
+            ? $make_item($ids[$current_index - 1])
+            : null;
+        $navigation['next']       = $current_index < count($ids) - 1
+            ? $make_item($ids[$current_index + 1])
+            : null;
+    }
 
     return $navigation;
 }
@@ -3204,6 +3540,38 @@ function dracka_save_relationship_meta($post_id)
             update_post_meta($post_id, 'dracka_album_id', $album_id);
         } else {
             delete_post_meta($post_id, 'dracka_album_id');
+        }
+    }
+
+    if ($post_type === 'album') {
+        if (!isset($_POST['dracka_album_details_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['dracka_album_details_nonce'])), 'dracka_save_album_details')) return;
+        if (!current_user_can('edit_post', $post_id)) return;
+
+        $rating_raw = isset($_POST['dracka_album_rating']) ? sanitize_key(wp_unslash($_POST['dracka_album_rating'])) : 'everyone';
+        if (!in_array($rating_raw, ['everyone', '16', '18'], true)) {
+            $rating_raw = 'everyone';
+        }
+
+        update_post_meta($post_id, DRACKA_ALBUM_RATING_META_KEY, $rating_raw);
+
+        if (in_array($rating_raw, ['16', '18'], true)) {
+            $gate_title = isset($_POST['dracka_album_gate_title']) ? sanitize_text_field(wp_unslash($_POST['dracka_album_gate_title'])) : '';
+            $gate_body  = isset($_POST['dracka_album_gate_body'])  ? sanitize_textarea_field(wp_unslash($_POST['dracka_album_gate_body'])) : '';
+
+            if ($gate_title !== '') {
+                update_post_meta($post_id, DRACKA_ALBUM_GATE_TITLE_META_KEY, $gate_title);
+            } else {
+                delete_post_meta($post_id, DRACKA_ALBUM_GATE_TITLE_META_KEY);
+            }
+
+            if ($gate_body !== '') {
+                update_post_meta($post_id, DRACKA_ALBUM_GATE_BODY_META_KEY, $gate_body);
+            } else {
+                delete_post_meta($post_id, DRACKA_ALBUM_GATE_BODY_META_KEY);
+            }
+        } else {
+            delete_post_meta($post_id, DRACKA_ALBUM_GATE_TITLE_META_KEY);
+            delete_post_meta($post_id, DRACKA_ALBUM_GATE_BODY_META_KEY);
         }
     }
 

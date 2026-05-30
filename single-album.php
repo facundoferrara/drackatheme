@@ -1,5 +1,6 @@
 <?php
 get_header();
+dracka_render_age_gate();
 $album_id = get_the_ID();
 ?>
 
