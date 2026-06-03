@@ -14,8 +14,10 @@
                 ob_start();
                 dynamic_sidebar($right);
                 $right_html = trim(ob_get_clean());
-                $has_left  = trim(strip_tags($left_html))  !== '';
-                $has_right = trim(strip_tags($right_html)) !== '';
+                $sidebar_has_content = fn($html) => trim(strip_tags($html)) !== ''
+                    || (bool) preg_match('/<(img|svg|video|audio|iframe|canvas|picture)\b/i', $html);
+                $has_left  = $sidebar_has_content($left_html);
+                $has_right = $sidebar_has_content($right_html);
                 if (! $has_left && ! $has_right) : continue;
                 endif;
                 if ($has_left xor $has_right) :
