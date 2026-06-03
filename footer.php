@@ -8,21 +8,22 @@
                 ['footer-bottom-left', 'footer-bottom-right'],
             ];
             foreach ($footer_rows as [$left, $right]) :
-                $has_left  = is_active_sidebar($left);
-                $has_right = is_active_sidebar($right);
+                ob_start();
+                dynamic_sidebar($left);
+                $left_html  = trim(ob_get_clean());
+                ob_start();
+                dynamic_sidebar($right);
+                $right_html = trim(ob_get_clean());
+                $has_left  = $left_html  !== '';
+                $has_right = $right_html !== '';
                 if (! $has_left && ! $has_right) : continue;
-                elseif ($has_left xor $has_right) :
-                    $solo = $has_left ? $left : $right;
-            ?>
-                    <div class="footer-cell footer-cell--span">
-                        <?php dynamic_sidebar($solo); ?>
-                    </div>
-                <?php
+                endif;
+                if ($has_left xor $has_right) :
+                    $solo_html = $has_left ? $left_html : $right_html;
+                    echo '<div class="footer-cell footer-cell--span">' . $solo_html . '</div>';
                 else :
-                ?>
-                    <div class="footer-cell"><?php dynamic_sidebar($left); ?></div>
-                    <div class="footer-cell"><?php dynamic_sidebar($right); ?></div>
-            <?php
+                    echo '<div class="footer-cell">' . $left_html  . '</div>';
+                    echo '<div class="footer-cell">' . $right_html . '</div>';
                 endif;
             endforeach;
             ?>
