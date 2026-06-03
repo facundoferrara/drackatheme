@@ -1856,6 +1856,29 @@ main > h1 {
     fill: currentColor;
 }
 
+/* Footer social icons — responsive, full-width spread */
+.footer-cell .social-menu {
+    justify-content: space-around;
+    width: 100%;
+    gap: 0;
+}
+
+.footer-cell .social-menu li {
+    flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+}
+
+.footer-cell .social-menu a {
+    width: clamp(44px, 7vw, 54px);
+    height: clamp(44px, 7vw, 54px);
+}
+
+.footer-cell .social-menu svg {
+    width: clamp(24px, 4.5vw, 36px);
+    height: clamp(24px, 4.5vw, 36px);
+}
+
 .mobile-overlay.is-open {
   pointer-events: auto;
   visibility: visible;
