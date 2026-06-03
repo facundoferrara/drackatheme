@@ -14,8 +14,8 @@
                 ob_start();
                 dynamic_sidebar($right);
                 $right_html = trim(ob_get_clean());
-                $has_left  = $left_html  !== '';
-                $has_right = $right_html !== '';
+                $has_left  = trim(strip_tags($left_html))  !== '';
+                $has_right = trim(strip_tags($right_html)) !== '';
                 if (! $has_left && ! $has_right) : continue;
                 endif;
                 if ($has_left xor $has_right) :
