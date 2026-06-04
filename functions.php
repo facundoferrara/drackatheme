@@ -1307,6 +1307,8 @@ function dracka_get_palette_defaults()
         'color_text'    => '#e9eaec',
         'color_muted'   => '#9aa1a8',
         'color_accent'  => '#6e7c88',
+        'color_ui'      => '#e9eaec',
+        'color_content' => '#e9eaec',
     ];
 }
 
@@ -1349,6 +1351,8 @@ function dracka_customize_register($wp_customize)
         'color_text'    => 'Text',
         'color_muted'   => 'Muted',
         'color_accent'  => 'Accent',
+        'color_ui'      => 'UI',
+        'color_content' => 'Content',
     ];
 
     foreach ($controls as $key => $label) {
@@ -1522,6 +1526,8 @@ function dracka_add_customizer_css()
         . '--color-text:' . $values['color_text'] . ';'
         . '--color-muted:' . $values['color_muted'] . ';'
         . '--color-accent:' . $values['color_accent'] . ';'
+        . '--color-ui:' . $values['color_ui'] . ';'
+        . '--color-content:' . $values['color_content'] . ';'
         . '}';
 
     wp_add_inline_style('dracka-style', $custom_css);
