@@ -1891,6 +1891,10 @@ main > h1 {
     height: clamp(24px, 4.5vw, 36px);
 }
 
+.footer-cell--span .footer-widget:has(.social-menu) {
+    width: 50%;
+}
+
 .mobile-overlay.is-open {
   pointer-events: auto;
   visibility: visible;
