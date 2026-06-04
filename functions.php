@@ -60,12 +60,15 @@ add_filter('default_comment_status', function (string $status, string $post_type
 function dracka_register_sidebars()
 {
     $footer_areas = [
-        'footer-top-left'     => __('Footer: Top Left', 'dracka'),
-        'footer-top-right'    => __('Footer: Top Right', 'dracka'),
-        'footer-center-left'  => __('Footer: Center Left', 'dracka'),
-        'footer-center-right' => __('Footer: Center Right', 'dracka'),
-        'footer-bottom-left'  => __('Footer: Bottom Left', 'dracka'),
-        'footer-bottom-right' => __('Footer: Bottom Right', 'dracka'),
+        'footer-top-left'      => __('Footer: Top Left', 'dracka'),
+        'footer-top-right'     => __('Footer: Top Right', 'dracka'),
+        'footer-center-left'   => __('Footer: Center Left', 'dracka'),
+        'footer-center-right'  => __('Footer: Center Right', 'dracka'),
+        'footer-bottom-left'   => __('Footer: Bottom Left', 'dracka'),
+        'footer-bottom-right'  => __('Footer: Bottom Right', 'dracka'),
+        'footer-desktop-left'  => __('Footer Desktop: Left', 'dracka'),
+        'footer-desktop-center' => __('Footer Desktop: Center', 'dracka'),
+        'footer-desktop-right' => __('Footer Desktop: Right', 'dracka'),
     ];
 
     foreach ($footer_areas as $id => $name) {
@@ -900,22 +903,22 @@ function dracka_render_latest_content_block($content_type, $attributes, $default
             <?php if (!$initially_open) : ?>hidden<?php endif; ?>
             <?php if ($initially_open) : ?>style="max-height: none; opacity: 1;" <?php endif; ?>>
             <?php if ($is_newsletter) : ?>
-            <div class="dracka-newsletter-grid-wrap">
+                <div class="dracka-newsletter-grid-wrap">
+                    <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
+                        <?php echo $initial_cards_html; ?>
+                    </div>
+                    <?php echo wp_kses_post($see_all_markup); ?>
+                </div>
+            <?php else : ?>
                 <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
                     <?php echo $initial_cards_html; ?>
                 </div>
-                <?php echo wp_kses_post($see_all_markup); ?>
-            </div>
-            <?php else : ?>
-            <div class="<?php echo esc_attr($css_prefix); ?>-grid" data-content-grid>
-                <?php echo $initial_cards_html; ?>
-            </div>
 
-            <?php if ($has_more) : ?>
-                <button type="button" class="<?php echo esc_attr($css_prefix); ?>-show-more" data-show-more><?php echo esc_html($show_more_label); ?></button>
-            <?php elseif ($reached_cap) : ?>
-                <a class="<?php echo esc_attr($css_prefix); ?>-go-library" href="<?php echo esc_url($go_to_library_url); ?>"><?php echo esc_html($go_to_library_label); ?></a>
-            <?php endif; ?>
+                <?php if ($has_more) : ?>
+                    <button type="button" class="<?php echo esc_attr($css_prefix); ?>-show-more" data-show-more><?php echo esc_html($show_more_label); ?></button>
+                <?php elseif ($reached_cap) : ?>
+                    <a class="<?php echo esc_attr($css_prefix); ?>-go-library" href="<?php echo esc_url($go_to_library_url); ?>"><?php echo esc_html($go_to_library_label); ?></a>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
@@ -1181,7 +1184,9 @@ function dracka_register_rest_routes()
         'args'                => [
             'id' => [
                 'sanitize_callback' => 'absint',
-                'validate_callback' => function ($val) { return is_numeric($val) && (int) $val > 0; },
+                'validate_callback' => function ($val) {
+                    return is_numeric($val) && (int) $val > 0;
+                },
             ],
         ],
     ]);
@@ -1215,7 +1220,9 @@ function dracka_register_rest_routes()
         'args'                => [
             'id' => [
                 'sanitize_callback' => 'absint',
-                'validate_callback' => function ($val) { return is_numeric($val) && (int) $val > 0; },
+                'validate_callback' => function ($val) {
+                    return is_numeric($val) && (int) $val > 0;
+                },
             ],
         ],
     ]);

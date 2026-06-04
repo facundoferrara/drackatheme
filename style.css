@@ -149,7 +149,19 @@ main {
   font-weight: 800;
 }
 
+.site-footer--desktop {
+  display: none;
+}
+
 @media (min-width: 1024px) {
+  .site-footer--mobile {
+    display: none;
+  }
+
+  .site-footer--desktop {
+    display: block;
+  }
+
   .site-footer__grid {
     grid-template-columns: repeat(3, 1fr);
   }
