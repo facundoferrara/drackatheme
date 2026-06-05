@@ -120,6 +120,7 @@ main {
   margin-top: auto;
   border-top: 1px solid var(--color-panel);
   background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .site-footer__inner {
@@ -1328,7 +1329,7 @@ main > h1 {
   display: block;
   font-size: 0.86rem;
   line-height: 1.35;
-  color: var(--color-content);
+  color: (var--color-text);
 }
 
 @media (max-width: 600px) and (orientation: portrait) {
