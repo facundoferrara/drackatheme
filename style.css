@@ -1329,7 +1329,7 @@ main > h1 {
   display: block;
   font-size: 0.86rem;
   line-height: 1.35;
-  color: (var--color-text);
+  color: var(--color-content);
 }
 
 @media (max-width: 600px) and (orientation: portrait) {
@@ -2166,7 +2166,7 @@ main > h1 {
 }
 
 .post-content {
-  color: var(--color-text);
+  color: var(--color-content);
   line-height: 1.75;
   text-align: justify;
   text-align-last: left;
