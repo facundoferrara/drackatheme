@@ -2352,6 +2352,10 @@ main > h1 {
 
 .dracka-comments-box {
   margin-top: 2rem;
+  max-width: 1024px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .dracka-comments-box .dracka-collapsible__content {
