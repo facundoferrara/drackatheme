@@ -48,7 +48,7 @@ body {
   font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
   font-weight: 400;
   background: var(--color-bg);
-  color: var(--color-content);
+  color: var(--color-text);
   line-height: 1.6;
   min-height: 100vh;
   display: flex;
@@ -105,8 +105,6 @@ a {
   --color-text: #e9eaec;
   --color-muted: #9aa1a8;
   --color-accent: #6e7c88;
-  --color-ui: #e9eaec;
-  --color-content: #e9eaec;
 }
 
 main {
@@ -120,7 +118,6 @@ main {
   margin-top: auto;
   border-top: 1px solid var(--color-panel);
   background: var(--color-surface);
-  color: var(--color-text);
 }
 
 .site-footer__inner {
@@ -152,25 +149,22 @@ main {
   font-weight: 800;
 }
 
-.site-footer--desktop {
-  display: none;
-}
-
 @media (min-width: 1024px) {
-  .site-footer--mobile {
-    display: none;
-  }
-
-  .site-footer--desktop {
-    display: block;
-  }
-
   .site-footer__grid {
     grid-template-columns: repeat(3, 1fr);
   }
 
   .footer-cell--span {
     grid-column: span 2;
+  }
+
+  .site-footer .social-menu {
+    gap: 2rem;
+  }
+
+  .site-footer .social-menu a {
+    width: 48px;
+    height: 48px;
   }
 }
 
@@ -215,7 +209,6 @@ main {
 
 main > h1 {
   text-align: center;
-  color: var(--color-ui);
 }
 
 .library-grid,
@@ -886,7 +879,7 @@ main > h1 {
 .series-status-badge--finished { color: #e879f9; background: rgba(232,121,249,0.12); border-color: rgba(232,121,249,0.3); }
 
 .series-description {
-  color: var(--color-content);
+  color: var(--color-text);
 }
 
 .series-meta-list {
@@ -1322,14 +1315,14 @@ main > h1 {
   font-size: 1rem;
   line-height: 1.3;
   font-weight: 800;
-  color: var(--color-content);
+  color: #ffffff;
 }
 
 .dracka-newsletter-card__excerpt {
   display: block;
   font-size: 0.86rem;
   line-height: 1.35;
-  color: var(--color-content);
+  color: #f4f4f4;
 }
 
 @media (max-width: 600px) and (orientation: portrait) {
@@ -1421,7 +1414,7 @@ main > h1 {
 }
 
 .dracka-news-ticker__item a {
-  color: var(--color-ui);
+  color: var(--color-text);
   text-decoration: none;
   font-weight: inherit;
 }
@@ -1561,7 +1554,7 @@ main > h1 {
   width: 2.25rem;
   height: 2.25rem;
   padding: 0;
-  color: var(--color-ui);
+  color: #ffffff;
 }
 
 .header-action--info {
@@ -1852,7 +1845,6 @@ main > h1 {
 .social-menu a {
     display: inline-flex;
     align-items: center;
-    color: var(--color-ui);
     justify-content: center;
     width: 44px;
     height: 44px;
@@ -1871,33 +1863,6 @@ main > h1 {
     width: 24px;
     height: 24px;
     fill: currentColor;
-}
-
-/* Footer social icons — responsive, full-width spread */
-.footer-cell .social-menu {
-    justify-content: space-around;
-    width: 100%;
-    gap: 0;
-}
-
-.footer-cell .social-menu li {
-    flex: 1 1 0;
-    display: flex;
-    justify-content: center;
-}
-
-.footer-cell .social-menu a {
-    width: clamp(44px, 7vw, 54px);
-    height: clamp(44px, 7vw, 54px);
-}
-
-.footer-cell .social-menu svg {
-    width: clamp(24px, 4.5vw, 36px);
-    height: clamp(24px, 4.5vw, 36px);
-}
-
-.footer-cell--span .footer-widget:has(.social-menu) {
-    width: 80%;
 }
 
 .mobile-overlay.is-open {
@@ -2166,7 +2131,7 @@ main > h1 {
 }
 
 .post-content {
-  color: var(--color-content);
+  color: var(--color-text);
   line-height: 1.75;
   text-align: justify;
   text-align-last: left;
