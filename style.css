@@ -120,6 +120,20 @@ main {
   background: var(--color-surface);
 }
 
+.site-footer--desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .site-footer--mobile {
+    display: none;
+  }
+
+  .site-footer--desktop {
+    display: block;
+  }
+}
+
 .site-footer__inner {
   width: 100%;
   max-width: clamp(1024px, 53.33vw, 1600px);
