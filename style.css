@@ -2150,7 +2150,7 @@ main > h1 {
 }
 
 .post-content {
-  color: var(--color-text);
+  color: var(--color-content);
   line-height: 1.75;
   text-align: justify;
   text-align-last: left;
