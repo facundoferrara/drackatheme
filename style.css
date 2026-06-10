@@ -544,13 +544,13 @@ main > h1 {
 .publication-single h1,
 .album-single h1,
 .image-single h1 {
-  margin-bottom: 0.75rem;
+  margin: 0.75rem;
 }
 
 .issue-series,
 .artwork-album {
   color: var(--color-muted);
-  margin-bottom: 1rem;
+  margin: 1rem;
 }
 
 .issue-episodes-nav {
