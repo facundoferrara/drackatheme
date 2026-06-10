@@ -51,15 +51,6 @@ add_action('admin_init', function () {
             'default'           => [],
         ]
     );
-
-    register_setting(
-        'dracka_theme_settings',
-        'dracka_mailpoet_form_id',
-        [
-            'sanitize_callback' => 'absint',
-            'default'           => 0,
-        ]
-    );
 });
 
 // -----------------------------------------------------------------------------
@@ -247,21 +238,6 @@ function dracka_theme_settings_page()
 
         <form method="post" action="options.php" id="dracka-theme-settings-form">
             <?php settings_fields('dracka_theme_settings'); ?>
-
-            <h2><?php esc_html_e('Newsletter', 'dracka'); ?></h2>
-            <p class="description">
-                <?php esc_html_e('Enter the MailPoet form ID to embed on the /newsletter page. Find it in MailPoet → Forms (shown in the list or the edit URL as ?id=X).', 'dracka'); ?>
-            </p>
-            <table class="form-table" role="presentation">
-                <tr>
-                    <th scope="row"><label for="dracka_mailpoet_form_id"><?php esc_html_e('MailPoet Form ID', 'dracka'); ?></label></th>
-                    <td>
-                        <input type="number" min="0" id="dracka_mailpoet_form_id" name="dracka_mailpoet_form_id"
-                            value="<?php echo esc_attr((int) get_option('dracka_mailpoet_form_id', 0)); ?>"
-                            class="small-text">
-                    </td>
-                </tr>
-            </table>
 
             <h2><?php esc_html_e('404 Images', 'dracka'); ?></h2>
             <p class="description">
