@@ -2069,13 +2069,40 @@ main > h1 {
 ========================= */
 
 .newsletter-page {
-  max-width: 72ch;
+  max-width: 1024px;
   margin: 2rem auto;
   padding: 0 1rem;
 }
 
 .newsletter-form {
   margin-top: 1.5rem;
+}
+
+/* MailPoet form on the newsletter page */
+.newsletter-page .mailpoet_form {
+  max-width: 400px;
+}
+
+.newsletter-page .mailpoet_submit {
+  display: inline-block;
+  max-width: 400px;
+  width: 100%;
+  padding: 0.6em 1.5em;
+  border: 2px solid var(--color-accent);
+  border-radius: 0.25rem;
+  color: var(--color-accent);
+  background: transparent;
+  font-family: 'Avenir', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.newsletter-page .mailpoet_submit:hover,
+.newsletter-page .mailpoet_submit:focus {
+  background: var(--color-accent);
+  color: var(--color-bg);
 }
 
 /* =========================

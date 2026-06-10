@@ -7,7 +7,9 @@
 get_header();
 ?>
 
-<?php the_content(); ?>
+<div class="newsletter-page">
+    <?php the_content(); ?>
+</div>
 
 <?php
 get_footer();
