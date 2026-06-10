@@ -9,7 +9,7 @@ get_header();
 $form_id = (int) get_option('dracka_mailpoet_form_id', 0);
 ?>
 
-<main class="newsletter-page">
+<!-- <main class="newsletter-page">
     <h1>Newsletter</h1>
 
     <?php if ($form_id > 0) : ?>
@@ -19,7 +19,7 @@ $form_id = (int) get_option('dracka_mailpoet_form_id', 0);
     <?php else : ?>
         <p>Subscription form coming soon.</p>
     <?php endif; ?>
-</main>
+</main> -->
 
 <?php
 get_footer();
